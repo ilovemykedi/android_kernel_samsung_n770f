@@ -546,7 +546,7 @@ static int iio_compute_scan_bytes(struct iio_dev *indio_dev,
 				const unsigned long *mask, bool timestamp)
 {
 	unsigned bytes = 0;
-	int length, i, largest = 0;
+	int length, i;
 
 	/* How much space will the demuxed element take? */
 	for_each_set_bit(i, mask,
@@ -554,17 +554,19 @@ static int iio_compute_scan_bytes(struct iio_dev *indio_dev,
 		length = iio_storage_bytes_for_si(indio_dev, i);
 		bytes = ALIGN(bytes, length);
 		bytes += length;
-		largest = max(largest, length);
 	}
 
 	if (timestamp) {
 		length = iio_storage_bytes_for_timestamp(indio_dev);
 		bytes = ALIGN(bytes, length);
 		bytes += length;
-		largest = max(largest, length);
 	}
 
-	bytes = ALIGN(bytes, largest);
+	/*
+	 * Samsung SSP sensorhub uses non power-of-two storage sizes
+	 * (6/7/12/17 bytes); ALIGN() to the largest element corrupts
+	 * scan_bytes and makes reads fail with -EINVAL.
+	 */
 	return bytes;
 }
 
