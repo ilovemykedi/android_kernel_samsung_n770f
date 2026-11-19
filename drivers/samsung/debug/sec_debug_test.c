@@ -758,6 +758,8 @@ static void simulate_WRITE_RO(char *arg)
 #else
 	ptr = (unsigned long *)simulate_WRITE_RO;
 #endif
+	/* keep older clang from folding this into a misaligned LDST64 reloc */
+	OPTIMIZER_HIDE_VAR(ptr);
 	*ptr ^= 0x12345678;
 }
 

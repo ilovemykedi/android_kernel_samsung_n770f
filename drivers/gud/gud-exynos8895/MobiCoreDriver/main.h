@@ -94,11 +94,6 @@ ssize_t debug_generic_read(struct file *file, char __user *user_buf,
 			   int (*function)(struct kasnprintf_buf *buf));
 int debug_generic_release(struct inode *inode, struct file *file);
 
-#if KERNEL_VERSION(4, 11, 0) > LINUX_VERSION_CODE
-static inline unsigned int kref_read(struct kref *kref)
-{
-	return atomic_read(&kref->refcount);
-}
-#endif
+/* kref_read() is provided by <linux/kref.h> (ACK 4.9.337) */
 
 #endif /* _MC_MAIN_H_ */
