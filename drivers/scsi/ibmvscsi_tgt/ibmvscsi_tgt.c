@@ -30,6 +30,7 @@
 #include <linux/types.h>
 #include <linux/list.h>
 #include <linux/string.h>
+#include <linux/delay.h>
 
 #include <target/target_core_base.h>
 #include <target/target_core_fabric.h>
@@ -1697,7 +1698,7 @@ static void srp_snd_msg_failed(struct scsi_info *vscsi, long rc)
 		if (!vscsi->rsp_q_timer.started) {
 			if (vscsi->rsp_q_timer.timer_pops <
 			    MAX_TIMER_POPS) {
-				kt = ktime_set(0, WAIT_NANO_SECONDS);
+				kt = WAIT_NANO_SECONDS;
 			} else {
 				/*
 				 * slide the timeslice if the maximum
@@ -1818,7 +1819,8 @@ static void ibmvscsis_send_messages(struct scsi_info *vscsi)
 					if (cmd->flags & CMD_FAST_FAIL)
 						crq->status = VIOSRP_ADAPTER_FAIL;
 
-					crq->IU_length = cpu_to_be16(cmd->rsp.len);
+			pr_debug("send_messages: cmd %p, tag 0x%llx, rc %ld\n",
+				 cmd, be64_to_cpu(cmd->rsp.tag), rc);
 
 					rc = h_send_crq(vscsi->dma_dev->unit_address,
 							be64_to_cpu(msg_hi),
@@ -3345,7 +3347,7 @@ static int ibmvscsis_probe(struct vio_dev *vdev,
 	snprintf(vscsi->eye, sizeof(vscsi->eye), "VSCSI %s", vdev->name);
 
 	vscsi->dds.unit_id = vdev->unit_address;
-	strscpy(vscsi->dds.partition_name, partition_name,
+	strncpy(vscsi->dds.partition_name, partition_name,
 		sizeof(vscsi->dds.partition_name));
 	vscsi->dds.partition_num = partition_number;
 

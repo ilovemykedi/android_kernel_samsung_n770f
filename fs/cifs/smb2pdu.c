@@ -2039,11 +2039,8 @@ void smb2_reconnect_server(struct work_struct *work)
 	spin_unlock(&cifs_tcp_ses_lock);
 
 	list_for_each_entry_safe(tcon, tcon2, &tmp_list, rlist) {
-		rc = smb2_reconnect(SMB2_INTERNAL_CMD, tcon);
-		if (!rc)
+		if (!smb2_reconnect(SMB2_INTERNAL_CMD, tcon))
 			cifs_reopen_persistent_handles(tcon);
-		else
-			resched = true;
 		list_del_init(&tcon->rlist);
 		cifs_put_tcon(tcon);
 	}

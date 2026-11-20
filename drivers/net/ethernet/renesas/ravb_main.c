@@ -269,6 +269,34 @@ static void ravb_ring_free(struct net_device *ndev, int q)
 	kfree(priv->tx_align[q]);
 	priv->tx_align[q] = NULL;
 
+	if (priv->rx_ring[q]) {
+		for (i = 0; i < priv->num_rx_ring[q]; i++) {
+			struct ravb_ex_rx_desc *desc = &priv->rx_ring[q][i];
+
+			if (!dma_mapping_error(ndev->dev.parent,
+					       le32_to_cpu(desc->dptr)))
+				dma_unmap_single(ndev->dev.parent,
+						 le32_to_cpu(desc->dptr),
+						 PKT_BUF_SZ,
+						 DMA_FROM_DEVICE);
+		}
+		ring_size = sizeof(struct ravb_ex_rx_desc) *
+			    (priv->num_rx_ring[q] + 1);
+		dma_free_coherent(ndev->dev.parent, ring_size, priv->rx_ring[q],
+				  priv->rx_desc_dma[q]);
+		priv->rx_ring[q] = NULL;
+	}
+
+	if (priv->tx_ring[q]) {
+		ravb_tx_free(ndev, q, false);
+
+		ring_size = sizeof(struct ravb_tx_desc) *
+			    (priv->num_tx_ring[q] * NUM_TX_DESC + 1);
+		dma_free_coherent(ndev->dev.parent, ring_size, priv->tx_ring[q],
+				  priv->tx_desc_dma[q]);
+		priv->tx_ring[q] = NULL;
+	}
+
 	/* Free TX skb ringbuffer.
 	 * SKBs are freed by ravb_tx_free() call above.
 	 */
@@ -917,7 +945,7 @@ static int ravb_poll(struct napi_struct *napi, int budget)
 		if (tis & mask) {
 			spin_lock_irqsave(&priv->lock, flags);
 			/* Clear TX interrupt */
-			ravb_write(ndev, ~(mask | TIS_RESERVED), TIS);
+			ravb_write(ndev, ~mask, TIS);
 			ravb_tx_free(ndev, q, true);
 			netif_wake_subqueue(ndev, q);
 			mmiowb();
@@ -1791,7 +1819,6 @@ static const struct net_device_ops ravb_netdev_ops = {
 	.ndo_do_ioctl		= ravb_do_ioctl,
 	.ndo_validate_addr	= eth_validate_addr,
 	.ndo_set_mac_address	= eth_mac_addr,
-	.ndo_change_mtu		= eth_change_mtu,
 };
 
 /* MDIO bus init function */

@@ -13,6 +13,10 @@ struct lkdtm_list {
 	struct list_head node;
 };
 
+struct lkdtm_list {
+	struct list_head node;
+};
+
 /*
  * Make sure our attempts to over run the kernel stack doesn't trigger
  * a compiler warning when CONFIG_FRAME_WARN is set. Then make sure we
@@ -86,7 +90,8 @@ noinline void lkdtm_CORRUPT_STACK(void)
 	/* Use default char array length that triggers stack protection. */
 	char data[8];
 
-	memset((void *)data, 0, 64);
+	memset((void *)data, 'a', 64);
+	pr_info("Corrupted stack with '%16s'...\n", data);
 }
 
 void lkdtm_UNALIGNED_LOAD_STORE_WRITE(void)

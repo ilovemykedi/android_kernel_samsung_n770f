@@ -59,14 +59,11 @@ static u32 vhost_transport_get_local_cid(void)
 	return VHOST_VSOCK_DEFAULT_HOST_CID;
 }
 
-/* Callers that dereference the return value must hold vhost_vsock_lock or the
- * RCU read lock.
- */
-static struct vhost_vsock *vhost_vsock_get(u32 guest_cid)
+static struct vhost_vsock *__vhost_vsock_get(u32 guest_cid)
 {
 	struct vhost_vsock *vsock;
 
-	hash_for_each_possible_rcu(vhost_vsock_hash, vsock, hash, guest_cid) {
+	list_for_each_entry(vsock, &vhost_vsock_list, list) {
 		u32 other_cid = vsock->guest_cid;
 
 		/* Skip instances that have no CID yet */
@@ -79,6 +76,17 @@ static struct vhost_vsock *vhost_vsock_get(u32 guest_cid)
 	}
 
 	return NULL;
+}
+
+static struct vhost_vsock *vhost_vsock_get(u32 guest_cid)
+{
+	struct vhost_vsock *vsock;
+
+	spin_lock_bh(&vhost_vsock_lock);
+	vsock = __vhost_vsock_get(guest_cid);
+	spin_unlock_bh(&vhost_vsock_lock);
+
+	return vsock;
 }
 
 static void
@@ -204,7 +212,6 @@ static int
 vhost_transport_send_pkt(struct virtio_vsock_pkt *pkt)
 {
 	struct vhost_vsock *vsock;
-	struct vhost_virtqueue *vq;
 	int len = pkt->len;
 
 	rcu_read_lock();
@@ -216,8 +223,6 @@ vhost_transport_send_pkt(struct virtio_vsock_pkt *pkt)
 		virtio_transport_free_pkt(pkt);
 		return -ENODEV;
 	}
-
-	vq = &vsock->vqs[VSOCK_VQ_RX];
 
 	if (pkt->reply)
 		atomic_inc(&vsock->queued_replies);
@@ -640,7 +645,7 @@ static int vhost_vsock_set_cid(struct vhost_vsock *vsock, u64 guest_cid)
 
 	/* Refuse if CID is already in use */
 	spin_lock_bh(&vhost_vsock_lock);
-	other = vhost_vsock_get(guest_cid);
+	other = __vhost_vsock_get(guest_cid);
 	if (other && other != vsock) {
 		spin_unlock_bh(&vhost_vsock_lock);
 		return -EADDRINUSE;

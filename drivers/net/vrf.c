@@ -265,7 +265,16 @@ static netdev_tx_t vrf_process_v4_outbound(struct sk_buff *skb,
 {
 	struct iphdr *ip4h;
 	int ret = NET_XMIT_DROP;
-	struct flowi4 fl4;
+	struct flowi4 fl4 = {
+		/* needed to match OIF rule */
+		.flowi4_oif = vrf_dev->ifindex,
+		.flowi4_iif = LOOPBACK_IFINDEX,
+		.flowi4_tos = RT_TOS(ip4h->tos),
+		.flowi4_flags = FLOWI_FLAG_ANYSRC | FLOWI_FLAG_SKIP_NH_OIF,
+		.flowi4_proto = ip4h->protocol,
+		.daddr = ip4h->daddr,
+		.saddr = ip4h->saddr,
+	};
 	struct net *net = dev_net(vrf_dev);
 	struct rtable *rt;
 
@@ -287,11 +296,6 @@ static netdev_tx_t vrf_process_v4_outbound(struct sk_buff *skb,
 	rt = ip_route_output_flow(net, &fl4, NULL);
 	if (IS_ERR(rt))
 		goto err;
-
-	if (rt->rt_type != RTN_UNICAST && rt->rt_type != RTN_LOCAL) {
-		ip_rt_put(rt);
-		goto err;
-	}
 
 	skb_dst_drop(skb);
 
@@ -636,6 +640,10 @@ static struct sk_buff *vrf_ip_out(struct net_device *vrf_dev,
 	struct dst_entry *dst = NULL;
 	struct rtable *rth;
 
+	/* don't divert multicast */
+	if (ipv4_is_multicast(ip_hdr(skb)->daddr))
+		return skb;
+
 	rcu_read_lock();
 
 	rth = rcu_dereference(vrf->rth);
@@ -871,7 +879,7 @@ static struct sk_buff *vrf_rcv_nfhook(u8 pf, unsigned int hook,
 {
 	struct net *net = dev_net(dev);
 
-	if (nf_hook(pf, hook, net, NULL, skb, dev, NULL, vrf_rcv_finish) != 1)
+	if (NF_HOOK(pf, hook, net, NULL, skb, dev, NULL, vrf_rcv_finish) < 0)
 		skb = NULL;    /* kfree_skb(skb) handled by nf code */
 
 	return skb;
@@ -1018,6 +1026,9 @@ static struct sk_buff *vrf_ip_rcv(struct net_device *vrf_dev,
 	skb->dev = vrf_dev;
 	skb->skb_iif = vrf_dev->ifindex;
 	IPCB(skb)->flags |= IPSKB_L3SLAVE;
+
+	if (ipv4_is_multicast(ip_hdr(skb)->daddr))
+		goto out;
 
 	/* loopback traffic; do not push through packet taps again.
 	 * Reset pkt_type for upper layers to process skb
@@ -1184,7 +1195,18 @@ static int vrf_add_fib_rules(const struct net_device *dev)
 	if (err < 0)
 		goto ipv6_err;
 
+#if IS_ENABLED(CONFIG_IP_MROUTE_MULTIPLE_TABLES)
+	err = vrf_fib_rule(dev, RTNL_FAMILY_IPMR, true);
+	if (err < 0)
+		goto ipmr_err;
+#endif
+
 	return 0;
+
+#if IS_ENABLED(CONFIG_IP_MROUTE_MULTIPLE_TABLES)
+ipmr_err:
+	vrf_fib_rule(dev, AF_INET6,  false);
+#endif
 
 ipv6_err:
 	vrf_fib_rule(dev, AF_INET,  false);

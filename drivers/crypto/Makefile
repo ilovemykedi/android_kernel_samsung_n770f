@@ -35,3 +35,4 @@ obj-$(CONFIG_CRYPTO_DEV_CHELSIO) += chelsio/
 ifeq ($(CONFIG_EXYNOS_FMP),y)
 obj-y += exynos-diskcipher.o fmp/
 endif
+obj-$(CONFIG_CRYPTO_DEV_VIRTIO) += virtio/

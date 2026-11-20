@@ -1,0 +1,1 @@
+cmd_fs/overlayfs/built-in.o :=  ./buildtools/samsung-toolchain/gcc-cfp/gcc-cfp-jopp-only/aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL   -r -o fs/overlayfs/built-in.o fs/overlayfs/overlay.o 

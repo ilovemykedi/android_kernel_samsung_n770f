@@ -434,14 +434,10 @@ static int ovl_dir_fsync(struct file *file, loff_t start, loff_t end,
 	struct dentry *dentry = file->f_path.dentry;
 	struct file *realfile = od->realfile;
 
-	/* Nothing to sync for lower */
-	if (!OVL_TYPE_UPPER(ovl_path_type(dentry)))
-		return 0;
-
 	/*
 	 * Need to check if we started out being a lower dir, but got copied up
 	 */
-	if (!od->is_upper) {
+	if (!od->is_upper && OVL_TYPE_UPPER(ovl_path_type(dentry))) {
 		struct inode *inode = file_inode(file);
 
 		realfile = lockless_dereference(od->upperfile);
@@ -499,19 +495,7 @@ static int ovl_dir_open(struct inode *inode, struct file *file)
 	if (!od)
 		return -ENOMEM;
 
-#ifdef CONFIG_KSU_SUSFS_SUS_OVERLAYFS
-	ovl_path_lowerdata(file->f_path.dentry, &realpath);
-	if (likely(realpath.mnt && realpath.dentry)) {
-		// We still use '__OVL_PATH_UPPER' here which should be fine.  
-		type = __OVL_PATH_UPPER;
-		goto bypass_orig_flow;
-	}
-#endif
-
 	type = ovl_path_real(file->f_path.dentry, &realpath);
-#ifdef CONFIG_KSU_SUSFS_SUS_OVERLAYFS
-bypass_orig_flow:
-#endif
 	realfile = ovl_path_open(&realpath, file->f_flags);
 	if (IS_ERR(realfile)) {
 		kfree(od);

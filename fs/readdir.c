@@ -22,7 +22,7 @@
 #include <linux/susfs_def.h>
 #endif
 
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 
 #ifdef CONFIG_KSU_SUSFS_SUS_PATH
 extern int susfs_sus_ino_for_filldir64(unsigned long ino);

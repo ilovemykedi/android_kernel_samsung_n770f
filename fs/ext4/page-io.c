@@ -338,7 +338,7 @@ void ext4_io_submit(struct ext4_io_submit *io)
 
 	if (bio) {
 		int io_op_flags = io->io_wbc->sync_mode == WB_SYNC_ALL ?
-				  WRITE_SYNC : 0;
+				  REQ_SYNC : 0;
 		bio_set_op_attrs(io->io_bio, REQ_OP_WRITE, io_op_flags);
 		if (ext4_encrypted_inode(io->io_end->inode) &&
 				S_ISREG(io->io_end->inode->i_mode))
@@ -483,7 +483,7 @@ int ext4_bio_write_page(struct ext4_io_submit *io,
 		}
 		if (buffer_new(bh)) {
 			clear_buffer_new(bh);
-			unmap_underlying_metadata(bh->b_bdev, bh->b_blocknr);
+			clean_bdev_bh_alias(bh);
 		}
 		set_buffer_async_write(bh);
 		nr_to_submit++;

@@ -72,7 +72,7 @@ static const char *sync_status_str(int status)
 }
 
 static void sync_print_fence(struct seq_file *s,
-			     struct fence *fence, bool show)
+			     struct dma_fence *fence, bool show)
 {
 	struct sync_timeline *parent = fence_parent(fence);
 	int status;
@@ -144,8 +144,8 @@ static void sync_print_sync_file(struct seq_file *s,
 				sync_file->name + HWC_FENCE_NAME_START + 1);
 	}
 
-	if (fence_is_array(sync_file->fence)) {
-		struct fence_array *array = to_fence_array(sync_file->fence);
+	if (dma_fence_is_array(sync_file->fence)) {
+		struct dma_fence_array *array = to_fence_array(sync_file->fence);
 
 		for (i = 0; i < array->num_fences; ++i)
 			sync_print_fence(s, array->fences[i], true);

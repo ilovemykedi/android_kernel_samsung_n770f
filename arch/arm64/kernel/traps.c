@@ -640,7 +640,7 @@ void cpu_enable_cache_maint_trap(const struct arm64_cpu_capabilities *__unused)
 }
 
 #define __user_cache_maint(insn, address, res)			\
-	if (address >= user_addr_max()) {			\
+	if (untagged_addr(address) >= user_addr_max()) {	\
 		res = -EFAULT;					\
 	} else {						\
 		uaccess_ttbr0_enable();				\
