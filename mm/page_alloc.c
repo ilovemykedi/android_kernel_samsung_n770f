@@ -3644,8 +3644,6 @@ __alloc_pages_slowpath(gfp_t gfp_mask, unsigned int order,
 	unsigned long pages_reclaimed = 0;
 	int retry_loop_count = 0;
 	unsigned long jiffies_s = jiffies;
-	unsigned long alloc_start = jiffies;
-	unsigned int stall_timeout = 10 * HZ;
 	cputime_t stime_s = 0, stime_e, stime_d;
 
 	task_cputime(current, NULL, &stime_s);

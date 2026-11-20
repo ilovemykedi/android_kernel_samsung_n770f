@@ -375,7 +375,7 @@ int dev_pm_opp_get_opp_count(struct device *dev)
 	opp_table = _find_opp_table(dev);
 	if (IS_ERR(opp_table)) {
 		count = PTR_ERR(opp_table);
-		dev_dbg(dev, "%s: OPP table not found (%d)\n",
+		dev_err(dev, "%s: OPP table not found (%d)\n",
 			__func__, count);
 		goto out_unlock;
 	}
@@ -1626,14 +1626,14 @@ int dev_pm_opp_register_set_opp_helper(struct device *dev,
 	opp_table->set_opp = set_opp;
 
 	mutex_unlock(&opp_table_lock);
-	return opp_table;
+	return 0;
 
 err:
 	_remove_opp_table(opp_table);
 unlock:
 	mutex_unlock(&opp_table_lock);
 
-	return ERR_PTR(ret);
+	return ret;
 }
 EXPORT_SYMBOL_GPL(dev_pm_opp_register_set_opp_helper);
 
@@ -1650,6 +1650,8 @@ EXPORT_SYMBOL_GPL(dev_pm_opp_register_set_opp_helper);
  */
 void dev_pm_opp_register_put_opp_helper(struct device *dev)
 {
+	struct opp_table *opp_table;
+
 	mutex_lock(&opp_table_lock);
 
 	/* Check for existing table for 'dev' first */

@@ -41,8 +41,6 @@ sync_file.o: drivers/dma-buf/sync_file.c include/linux/kconfig.h \
   include/uapi/linux/kernel.h include/uapi/linux/sysinfo.h \
   arch/arm64/include/asm/cache.h arch/arm64/include/asm/cachetype.h \
   arch/arm64/include/asm/cputype.h arch/arm64/include/asm/sysreg.h \
-  arch/arm64/include/asm/opcodes.h \
-  arch/arm64/include/../../arm/include/asm/opcodes.h \
   include/linux/spinlock.h include/linux/preempt.h \
   arch/arm64/include/generated/asm/preempt.h \
   include/asm-generic/preempt.h include/linux/thread_info.h \
@@ -135,7 +133,8 @@ sync_file.o: drivers/dma-buf/sync_file.c include/linux/kconfig.h \
   include/uapi/asm-generic/siginfo.h include/linux/pid.h \
   include/linux/topology.h include/linux/mmzone.h \
   include/linux/pageblock-flags.h include/linux/memory_hotplug.h \
-  include/linux/notifier.h include/linux/mutex.h include/linux/srcu.h \
+  include/linux/notifier.h include/linux/mutex.h \
+  include/linux/debug_locks.h include/linux/srcu.h \
   arch/arm64/include/asm/topology.h include/asm-generic/topology.h \
   include/linux/seccomp.h include/uapi/linux/seccomp.h \
   arch/arm64/include/asm/seccomp.h arch/arm64/include/asm/unistd.h \
@@ -162,8 +161,7 @@ sync_file.o: drivers/dma-buf/sync_file.c include/linux/kconfig.h \
   include/linux/semaphore.h include/linux/fcntl.h \
   include/uapi/linux/fcntl.h arch/arm64/include/uapi/asm/fcntl.h \
   include/uapi/asm-generic/fcntl.h include/uapi/linux/fiemap.h \
-  include/linux/migrate_mode.h include/linux/blk_types.h \
-  include/linux/bvec.h include/linux/delayed_call.h \
+  include/linux/migrate_mode.h include/linux/delayed_call.h \
   include/uapi/linux/fs.h include/uapi/linux/ioctl.h \
   arch/arm64/include/generated/asm/ioctl.h include/asm-generic/ioctl.h \
   include/uapi/asm-generic/ioctl.h include/linux/quota.h \
@@ -171,7 +169,8 @@ sync_file.o: drivers/dma-buf/sync_file.c include/linux/kconfig.h \
   include/linux/dqblk_v1.h include/linux/dqblk_v2.h \
   include/linux/dqblk_qtree.h include/linux/projid.h \
   include/uapi/linux/quota.h include/linux/nfs_fs_i.h \
-  include/linux/poll.h arch/arm64/include/asm/uaccess.h \
+  include/linux/poll.h include/linux/uaccess.h \
+  arch/arm64/include/asm/uaccess.h \
   arch/arm64/include/asm/kernel-pgtable.h \
   arch/arm64/include/asm/pgtable.h arch/arm64/include/asm/proc-fns.h \
   arch/arm64/include/asm/pgtable-prot.h arch/arm64/include/asm/fixmap.h \
@@ -179,7 +178,7 @@ sync_file.o: drivers/dma-buf/sync_file.c include/linux/kconfig.h \
   include/asm-generic/pgtable.h arch/arm64/include/asm/compiler.h \
   include/uapi/linux/poll.h arch/arm64/include/generated/asm/poll.h \
   include/uapi/asm-generic/poll.h include/linux/slab.h \
-  include/linux/kmemleak.h include/linux/kasan.h include/linux/uaccess.h \
+  include/linux/kmemleak.h include/linux/kasan.h \
   include/linux/anon_inodes.h include/linux/sync_file.h \
-  include/linux/fence.h include/linux/fence-array.h \
+  include/linux/dma-fence.h include/linux/dma-fence-array.h \
   include/uapi/linux/sync_file.h drivers/dma-buf/sync_debug.h

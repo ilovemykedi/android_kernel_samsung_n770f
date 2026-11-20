@@ -23,7 +23,7 @@
 #define _KBASE_CSF_KCPU_H_
 
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE)
-#include <linux/fence.h>
+#include <linux/dma-fence.h>
 #else
 #include <linux/dma-fence.h>
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0) */
@@ -47,16 +47,16 @@ struct kbase_kcpu_command_import_info {
  * struct kbase_kcpu_command_fence_info - Structure which holds information
  *		about the fence object enqueued in the kcpu command queue
  *
- * @fence_cb:      Fence callback
+ * @dma_fence_cb:      Fence callback
  * @fence:         Fence
  * @kcpu_queue:    kcpu command queue
  */
 struct kbase_kcpu_command_fence_info {
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE)
-	struct fence_cb fence_cb;
-	struct fence *fence;
+	struct dma_fence_cb dma_fence_cb;
+	struct dma_fence *fence;
 #else
-	struct dma_fence_cb fence_cb;
+	struct dma_fence_cb dma_fence_cb;
 	struct dma_fence *fence;
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0) */
 	struct kbase_kcpu_command_queue *kcpu_queue;

@@ -1,4 +1,4 @@
-cmd_fs/overlayfs/dir.o := ./buildtools/samsung-toolchain/clang/host/linux-x86/clang-r349610-jopp/bin/clang -Wp,-MD,fs/overlayfs/.dir.o.d -nostdinc -isystem /root/kernel/n770f/buildtools/samsung-toolchain/clang/host/linux-x86/clang-r349610-jopp/lib64/clang/8.0.8/include -I./arch/arm64/include -I./arch/arm64/include/generated/uapi -I./arch/arm64/include/generated  -I./include -I./arch/arm64/include/uapi -I./include/uapi -I./include/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Qunused-arguments -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -fshort-wchar -Werror-implicit-function-declaration -Werror -std=gnu89 -Wno-sizeof-pointer-div --target=aarch64-linux-gnu --prefix=/root/kernel/n770f/buildtools/samsung-toolchain/gcc-cfp/gcc-cfp-jopp-only/aarch64-linux-android-4.9/bin/ --gcc-toolchain=/root/kernel/n770f/buildtools/samsung-toolchain/gcc-cfp/gcc-cfp-jopp-only/aarch64-linux-android-4.9 -no-integrated-as -Werror=unknown-warning-option -fno-PIE -mno-implicit-float -fno-asynchronous-unwind-tables -fno-pic -Wno-asm-operand-widths -fno-delete-null-pointer-checks -Wno-address-of-packed-member -Os -Wframe-larger-than=4096 -fstack-protector-strong -Wno-format-invalid-specifier -Wno-gnu -Wno-duplicate-decl-specifier -Wno-tautological-compare -mno-global-merge -Wno-unused-const-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-merge-all-constants -fno-stack-check -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Werror=incompatible-pointer-types -Wno-initializer-overrides -Wno-unused-value -Wno-format -Wno-sign-compare -Wno-format-zero-length -Wno-uninitialized    -DKBUILD_BASENAME='"dir"'  -DKBUILD_MODNAME='"overlay"' -c -o fs/overlayfs/.tmp_dir.o fs/overlayfs/dir.c
+cmd_fs/overlayfs/dir.o := ./buildtools/samsung-toolchain/clang/host/linux-x86/clang-r349610-jopp/bin/clang -Wp,-MD,fs/overlayfs/.dir.o.d -nostdinc -isystem /root/kernel/n770f/buildtools/samsung-toolchain/clang/host/linux-x86/clang-r349610-jopp/lib64/clang/8.0.8/include -I./arch/arm64/include -I./arch/arm64/include/generated/uapi -I./arch/arm64/include/generated  -I./include -I./arch/arm64/include/uapi -I./include/uapi -I./include/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Qunused-arguments -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -fshort-wchar -Werror-implicit-function-declaration -Werror -std=gnu89 -Wno-sizeof-pointer-div --target=aarch64-linux-gnu --prefix=/root/kernel/n770f/buildtools/samsung-toolchain/gcc-cfp/gcc-cfp-jopp-only/aarch64-linux-android-4.9/bin/ --gcc-toolchain=/root/kernel/n770f/buildtools/samsung-toolchain/gcc-cfp/gcc-cfp-jopp-only/aarch64-linux-android-4.9 -no-integrated-as -Werror=unknown-warning-option -fno-PIE -mno-implicit-float -DCONFIG_BROKEN_GAS_INST=1 -fno-asynchronous-unwind-tables -fno-pic -Wno-asm-operand-widths -fno-delete-null-pointer-checks -Wno-address-of-packed-member -Os -Wframe-larger-than=4096 -fstack-protector-strong -Wno-format-invalid-specifier -Wno-gnu -Wno-duplicate-decl-specifier -Wno-tautological-compare -mno-global-merge -Wno-unused-const-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-merge-all-constants -fno-stack-check -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Werror=incompatible-pointer-types -Wno-initializer-overrides -Wno-unused-value -Wno-format -Wno-sign-compare -Wno-format-zero-length -Wno-uninitialized    -DKBUILD_BASENAME='"dir"'  -DKBUILD_MODNAME='"overlay"' -c -o fs/overlayfs/.tmp_dir.o fs/overlayfs/dir.c
 
 source_fs/overlayfs/dir.o := fs/overlayfs/dir.c
 
@@ -65,6 +65,7 @@ deps_fs/overlayfs/dir.o := \
     $(wildcard include/config/have/underscore/symbol/prefix.h) \
     $(wildcard include/config/modules.h) \
     $(wildcard include/config/modversions.h) \
+    $(wildcard include/config/module/rel/crcs.h) \
     $(wildcard include/config/trim/unused/ksyms.h) \
     $(wildcard include/config/unused/symbols.h) \
   arch/arm64/include/asm/linkage.h \
@@ -124,6 +125,7 @@ deps_fs/overlayfs/dir.o := \
   include/linux/printk.h \
     $(wildcard include/config/sec/debug/auto/comment.h) \
     $(wildcard include/config/message/loglevel/default.h) \
+    $(wildcard include/config/console/loglevel/default.h) \
     $(wildcard include/config/early/printk.h) \
     $(wildcard include/config/printk/nmi.h) \
     $(wildcard include/config/printk.h) \
@@ -141,15 +143,11 @@ deps_fs/overlayfs/dir.o := \
   arch/arm64/include/asm/cachetype.h \
   arch/arm64/include/asm/cputype.h \
   arch/arm64/include/asm/sysreg.h \
+    $(wildcard include/config/broken/gas/inst.h) \
+    $(wildcard include/config/cpu/big/endian.h) \
     $(wildcard include/config/arm64/4k/pages.h) \
     $(wildcard include/config/arm64/16k/pages.h) \
     $(wildcard include/config/arm64/64k/pages.h) \
-  arch/arm64/include/asm/opcodes.h \
-    $(wildcard include/config/cpu/big/endian.h) \
-    $(wildcard include/config/cpu/endian/be8.h) \
-  arch/arm64/include/../../arm/include/asm/opcodes.h \
-    $(wildcard include/config/cpu/endian/be32.h) \
-    $(wildcard include/config/thumb2/kernel.h) \
   include/linux/spinlock.h \
     $(wildcard include/config/debug/spinlock.h) \
     $(wildcard include/config/generic/lockbreak.h) \
@@ -400,6 +398,7 @@ deps_fs/overlayfs/dir.o := \
     $(wildcard include/config/compat/brk.h) \
     $(wildcard include/config/cgroups.h) \
     $(wildcard include/config/cc/stackprotector.h) \
+    $(wildcard include/config/arch/has/scaled/cputime.h) \
     $(wildcard include/config/cpu/freq/times.h) \
     $(wildcard include/config/virt/cpu/accounting/gen.h) \
     $(wildcard include/config/sysvipc.h) \
@@ -409,6 +408,7 @@ deps_fs/overlayfs/dir.o := \
     $(wildcard include/config/ubsan.h) \
     $(wildcard include/config/task/xacct.h) \
     $(wildcard include/config/cpusets.h) \
+    $(wildcard include/config/intel/rdt/a.h) \
     $(wildcard include/config/futex.h) \
     $(wildcard include/config/numa/balancing.h) \
     $(wildcard include/config/arch/want/batched/unmap/tlb/flush.h) \
@@ -454,7 +454,6 @@ deps_fs/overlayfs/dir.o := \
     $(wildcard include/config/aio.h) \
     $(wildcard include/config/mmu/notifier.h) \
     $(wildcard include/config/compaction.h) \
-    $(wildcard include/config/x86/intel/mpx.h) \
     $(wildcard include/config/hugetlb/page.h) \
   include/linux/auxvec.h \
   include/uapi/linux/auxvec.h \
@@ -592,6 +591,8 @@ deps_fs/overlayfs/dir.o := \
   include/linux/notifier.h \
   include/linux/mutex.h \
     $(wildcard include/config/mutex/spin/on/owner.h) \
+  include/linux/debug_locks.h \
+    $(wildcard include/config/debug/locking/api/selftests.h) \
   include/linux/srcu.h \
   arch/arm64/include/asm/topology.h \
   include/asm-generic/topology.h \
@@ -677,10 +678,6 @@ deps_fs/overlayfs/dir.o := \
   include/uapi/asm-generic/fcntl.h \
   include/uapi/linux/fiemap.h \
   include/linux/migrate_mode.h \
-  include/linux/blk_types.h \
-    $(wildcard include/config/blk/dev/integrity.h) \
-  include/linux/bvec.h \
-    $(wildcard include/config/crypto/diskcipher.h) \
   include/linux/delayed_call.h \
   include/uapi/linux/fs.h \
     $(wildcard include/config/epm.h) \
@@ -734,8 +731,6 @@ deps_fs/overlayfs/dir.o := \
     $(wildcard include/config/debug/pagealloc.h) \
     $(wildcard include/config/hibernation.h) \
     $(wildcard include/config/hugetlbfs.h) \
-  include/linux/debug_locks.h \
-    $(wildcard include/config/debug/locking/api/selftests.h) \
   include/linux/range.h \
   include/linux/page_ext.h \
     $(wildcard include/config/idle/page/tracking.h) \
@@ -771,10 +766,49 @@ deps_fs/overlayfs/dir.o := \
     $(wildcard include/config/memory/balloon.h) \
     $(wildcard include/config/balloon/compaction.h) \
     $(wildcard include/config/zram/lru/writeback.h) \
+  include/linux/module.h \
+    $(wildcard include/config/modules/tree/lookup.h) \
+    $(wildcard include/config/livepatch.h) \
+    $(wildcard include/config/cfi/clang.h) \
+    $(wildcard include/config/module/sig.h) \
+    $(wildcard include/config/kallsyms.h) \
+    $(wildcard include/config/tracepoints.h) \
+    $(wildcard include/config/event/tracing.h) \
+    $(wildcard include/config/module/unload.h) \
+    $(wildcard include/config/constructors.h) \
+  include/linux/kmod.h \
+  include/linux/elf.h \
+  arch/arm64/include/asm/elf.h \
+  arch/arm64/include/generated/asm/user.h \
+  include/asm-generic/user.h \
+  include/uapi/linux/elf.h \
+  include/uapi/linux/elf-em.h \
+  include/linux/kobject.h \
+    $(wildcard include/config/uevent/helper.h) \
+    $(wildcard include/config/debug/kobject/release.h) \
+  include/linux/sysfs.h \
+  include/linux/kernfs.h \
+    $(wildcard include/config/kernfs.h) \
+  include/linux/kobject_ns.h \
+  include/linux/moduleparam.h \
+    $(wildcard include/config/alpha.h) \
+    $(wildcard include/config/ppc64.h) \
+  include/linux/extable.h \
+  include/linux/rbtree_latch.h \
+  include/linux/cfi.h \
+    $(wildcard include/config/cfi/clang/shadow.h) \
+  arch/arm64/include/asm/module.h \
+    $(wildcard include/config/arm64/module/plts.h) \
+    $(wildcard include/config/randomize/base.h) \
+  include/asm-generic/module.h \
+    $(wildcard include/config/have/mod/arch/specific.h) \
+    $(wildcard include/config/modules/use/elf/rel.h) \
+    $(wildcard include/config/modules/use/elf/rela.h) \
   include/linux/posix_acl.h \
   include/uapi/linux/posix_acl.h \
   include/linux/posix_acl_xattr.h \
   include/uapi/linux/posix_acl_xattr.h \
+  include/linux/ratelimit.h \
   fs/overlayfs/overlayfs.h \
     $(wildcard include/config/ksu/susfs/sus/overlayfs.h) \
 

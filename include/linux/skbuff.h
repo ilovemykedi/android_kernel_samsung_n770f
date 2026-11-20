@@ -657,8 +657,6 @@ struct sk_buff {
 		int			ip_defrag_offset;
 	};
 
-	struct net_device	*dev;
-
 	union {
 		struct net_device	*dev;
 		/* Some protocols might use this space to store information,

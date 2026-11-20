@@ -26,7 +26,7 @@
 
 static const char *
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE)
-kbase_fence_get_driver_name(struct fence *fence)
+kbase_fence_get_driver_name(struct dma_fence *fence)
 #else
 kbase_fence_get_driver_name(struct dma_fence *fence)
 #endif
@@ -36,7 +36,7 @@ kbase_fence_get_driver_name(struct dma_fence *fence)
 
 static const char *
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE)
-kbase_fence_get_timeline_name(struct fence *fence)
+kbase_fence_get_timeline_name(struct dma_fence *fence)
 #else
 kbase_fence_get_timeline_name(struct dma_fence *fence)
 #endif
@@ -46,7 +46,7 @@ kbase_fence_get_timeline_name(struct dma_fence *fence)
 
 static bool
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE)
-kbase_fence_enable_signaling(struct fence *fence)
+kbase_fence_enable_signaling(struct dma_fence *fence)
 #else
 kbase_fence_enable_signaling(struct dma_fence *fence)
 #endif
@@ -56,7 +56,7 @@ kbase_fence_enable_signaling(struct dma_fence *fence)
 
 static void
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE)
-kbase_fence_fence_value_str(struct fence *fence, char *str, int size)
+kbase_fence_fence_value_str(struct dma_fence *fence, char *str, int size)
 #else
 kbase_fence_fence_value_str(struct dma_fence *fence, char *str, int size)
 #endif
@@ -69,9 +69,9 @@ kbase_fence_fence_value_str(struct dma_fence *fence, char *str, int size)
 }
 
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE)
-extern const struct fence_ops kbase_fence_ops; /* silence checker warning */
-const struct fence_ops kbase_fence_ops = {
-	.wait = fence_default_wait,
+extern const struct dma_fence_ops kbase_fence_ops; /* silence checker warning */
+const struct dma_fence_ops kbase_fence_ops = {
+	.wait = dma_fence_default_wait,
 #else
 extern const struct dma_fence_ops kbase_fence_ops; /* silence checker warning */
 const struct dma_fence_ops kbase_fence_ops = {

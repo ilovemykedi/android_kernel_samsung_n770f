@@ -1253,7 +1253,7 @@ static struct sync_file *m2m1shot2_create_fence(struct m2m1shot2_context *ctx)
 	fence = sync_file_create(&pt->base);
 	if (!fence) {
 		dev_err(dev, "%s: failed to create fence\n", __func__);
-		fence_put(&pt->base);
+		dma_fence_put(&pt->base);
 	}
 
 	return fence;

@@ -442,7 +442,6 @@ struct sock {
 
 	u16			sk_gso_max_segs;
 	u8			sk_pacing_shift;
-	int			sk_rcvlowat;
 	unsigned long	        sk_lingertime;
 	struct proto		*sk_prot_creator;
 	rwlock_t		sk_callback_lock;
@@ -450,8 +449,6 @@ struct sock {
 				sk_err_soft;
 	u32			sk_ack_backlog;
 	u32			sk_max_ack_backlog;
-	__u32			sk_priority;
-	__u32			sk_mark;
 	kuid_t			sk_uid;
 	struct pid		*sk_peer_pid;
 	const struct cred	*sk_peer_cred;

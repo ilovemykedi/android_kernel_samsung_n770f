@@ -66,7 +66,7 @@ static void kbase_jd_debugfs_fence_info(struct kbase_jd_atom *atom,
 
 		if (atom->dma_fence.fence) {
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE)
-			struct fence *fence = atom->dma_fence.fence;
+			struct dma_fence *fence = atom->dma_fence.fence;
 #else
 			struct dma_fence *fence = atom->dma_fence.fence;
 #endif
@@ -85,7 +85,7 @@ static void kbase_jd_debugfs_fence_info(struct kbase_jd_atom *atom,
 		list_for_each_entry(cb, &atom->dma_fence.callbacks,
 				    node) {
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE)
-			struct fence *fence = cb->fence;
+			struct dma_fence *fence = cb->fence;
 #else
 			struct dma_fence *fence = cb->fence;
 #endif

@@ -184,13 +184,6 @@ union bpf_attr {
 		__u32		attach_type;
 		__u32		attach_flags;
 	};
-
-	struct { /* anonymous struct used by BPF_PROG_ATTACH/DETACH commands */
-		__u32		target_fd;	/* container object to attach to */
-		__u32		attach_bpf_fd;	/* eBPF program to attach */
-		__u32		attach_type;
-		__u32		attach_flags;
-	};
 } __attribute__((aligned(8)));
 
 /* BPF helper function descriptions:
@@ -495,7 +488,10 @@ union bpf_attr {
 	FN(set_hash_invalid),		\
 	FN(get_numa_node_id),		\
 	FN(skb_change_head),		\
-	FN(xdp_adjust_head),
+	FN(xdp_adjust_head),		\
+	FN(probe_read_str),		\
+	FN(get_socket_cookie),		\
+	FN(get_socket_uid),
 
 /* integer value in 'imm' field of BPF_CALL instruction selects which helper
  * function eBPF program intends to call

@@ -1200,15 +1200,15 @@ static int kbase_kcpu_cqs_set_operation_prepare(
 
 #if IS_ENABLED(CONFIG_SYNC_FILE)
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE)
-static void kbase_csf_fence_wait_callback(struct fence *fence,
-			struct fence_cb *cb)
+static void kbase_csf_fence_wait_callback(struct dma_fence *fence,
+			struct dma_fence_cb *cb)
 #else
 static void kbase_csf_fence_wait_callback(struct dma_fence *fence,
 			struct dma_fence_cb *cb)
 #endif
 {
 	struct kbase_kcpu_command_fence_info *fence_info = container_of(cb,
-			struct kbase_kcpu_command_fence_info, fence_cb);
+			struct kbase_kcpu_command_fence_info, dma_fence_cb);
 	struct kbase_kcpu_command_queue *kcpu_queue = fence_info->kcpu_queue;
 	struct kbase_context *const kctx = kcpu_queue->kctx;
 
@@ -1236,7 +1236,7 @@ static void kbase_kcpu_fence_wait_cancel(
 
 	if (kcpu_queue->fence_wait_processed) {
 		bool removed = dma_fence_remove_callback(fence_info->fence,
-				&fence_info->fence_cb);
+				&fence_info->dma_fence_cb);
 
 #ifdef CONFIG_MALI_FENCE_DEBUG
 		/* Fence-wait cancelled. Deactivate the timer for fence-wait timeout */
@@ -1273,7 +1273,7 @@ static void fence_timeout_callback(struct timer_list *timer)
 	struct kbase_kcpu_command *cmd = &kcpu_queue->commands[kcpu_queue->start_offset];
 	struct kbase_kcpu_command_fence_info *fence_info;
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE)
-	struct fence *fence;
+	struct dma_fence *fence;
 #else
 	struct dma_fence *fence;
 #endif
@@ -1344,7 +1344,7 @@ static int kbase_kcpu_fence_wait_process(
 {
 	int fence_status = 0;
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE)
-	struct fence *fence;
+	struct dma_fence *fence;
 #else
 	struct dma_fence *fence;
 #endif
@@ -1360,7 +1360,7 @@ static int kbase_kcpu_fence_wait_process(
 		fence_status = dma_fence_get_status(fence);
 	} else {
 		int cb_err = dma_fence_add_callback(fence,
-			&fence_info->fence_cb,
+			&fence_info->dma_fence_cb,
 			kbase_csf_fence_wait_callback);
 
 		KBASE_KTRACE_ADD_CSF_KCPU(kcpu_queue->kctx->kbdev,
@@ -1398,7 +1398,7 @@ static int kbase_kcpu_fence_wait_prepare(
 {
 	struct kbase_context *const kctx = kcpu_queue->kctx;
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE)
-	struct fence *fence_in;
+	struct dma_fence *fence_in;
 #else
 	struct dma_fence *fence_in;
 #endif
@@ -1457,7 +1457,7 @@ static int kbase_kcpu_fence_signal_prepare(
 {
 	struct kbase_context *const kctx = kcpu_queue->kctx;
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE)
-	struct fence *fence_out;
+	struct dma_fence *fence_out;
 #else
 	struct dma_fence *fence_out;
 #endif

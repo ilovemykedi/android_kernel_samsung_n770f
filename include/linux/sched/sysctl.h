@@ -44,7 +44,6 @@ extern unsigned int sysctl_numa_balancing_scan_size;
 extern __read_mostly unsigned int sysctl_sched_migration_cost;
 extern __read_mostly unsigned int sysctl_sched_nr_migrate;
 extern __read_mostly unsigned int sysctl_sched_time_avg;
-extern unsigned int sysctl_sched_shares_window;
 extern unsigned int sched_switch_to_rt_load_ratio;
 extern unsigned int sched_switch_to_fair_load_ratio;
 extern unsigned int sched_rt_remove_ratio_for_freq;

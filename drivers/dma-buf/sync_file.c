@@ -172,7 +172,7 @@ static int sync_file_set_fence(struct sync_file *sync_file,
 static struct dma_fence **get_fences(struct sync_file *sync_file, int *num_fences)
 {
 	if (dma_fence_is_array(sync_file->fence)) {
-		struct dma_fence_array *array = to_fence_array(sync_file->fence);
+		struct dma_fence_array *array = to_dma_fence_array(sync_file->fence);
 
 		*num_fences = array->num_fences;
 		return array->fences;
@@ -431,7 +431,7 @@ static void sync_fill_fence_info(struct dma_fence *fence,
 	strlcpy(info->driver_name, fence->ops->get_driver_name(fence),
 		sizeof(info->driver_name));
 
-	info->status = fence_get_status(fence);
+	info->status = dma_fence_get_status(fence);
 	info->timestamp_ns = ktime_to_ns(fence->timestamp);
 }
 

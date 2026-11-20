@@ -523,7 +523,7 @@ struct kbase_jd_atom {
 		 */
 #if defined(CONFIG_SYNC_FILE)
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE)
-		struct fence *fence_in;
+		struct dma_fence *fence_in;
 #else
 		struct dma_fence *fence_in;
 #endif
@@ -540,7 +540,7 @@ struct kbase_jd_atom {
 		 * failure).
 		 */
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE)
-		struct fence *fence;
+		struct dma_fence *fence;
 #else
 		struct dma_fence *fence;
 #endif

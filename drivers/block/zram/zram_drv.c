@@ -1364,9 +1364,7 @@ retry:
 		goto out;
 	}
 
-	bio_init(&bio);
-	bio.bi_max_vecs = nr_pages;
-	bio.bi_io_vec = bio_vec;
+	bio_init(&bio, bio_vec, nr_pages);
 	bio.bi_bdev = zram->bdev;
 
 	bio.bi_iter.bi_sector = blk_idx * (PAGE_SIZE >> 9);
@@ -1733,10 +1731,7 @@ static ssize_t writeback_store(struct device *dev,
 			continue;
 		}
 
-		bio_init(&bio);
-
-		bio.bi_max_vecs = 1;
-		bio.bi_io_vec = &bvec;
+		bio_init(&bio, &bvec, 1);
 		bio.bi_bdev = zram->bdev;
 
 		bio.bi_iter.bi_sector = blk_idx * (PAGE_SIZE >> 9);
@@ -2447,7 +2442,7 @@ static void zram_free_page(struct zram *zram, size_t index)
 #endif
 
 #ifdef CONFIG_ZRAM_MEMORY_TRACKING
-	zram->table[index].ac_time.tv64 = 0;
+	zram->table[index].ac_time = 0;
 #endif
 	if (zram_test_flag(zram, index, ZRAM_IDLE))
 		zram_clear_flag(zram, index, ZRAM_IDLE);

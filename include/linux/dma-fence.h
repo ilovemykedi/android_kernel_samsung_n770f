@@ -80,7 +80,10 @@ struct dma_fence {
 	unsigned seqno;
 	unsigned long flags;
 	ktime_t timestamp;
-	int status;
+	union {
+		int status;	/* v4.10 name */
+		int error;	/* v4.11+ name, used by the 4.9 stable backports */
+	};
 };
 
 enum dma_fence_flag_bits {
@@ -379,6 +382,40 @@ static inline struct dma_fence *dma_fence_later(struct dma_fence *f1,
 		return dma_fence_is_signaled(f1) ? NULL : f1;
 	else
 		return dma_fence_is_signaled(f2) ? NULL : f2;
+}
+
+/**
+ * dma_fence_get_status_locked - returns the status upon completion
+ * @fence: [in]	the dma_fence to query
+ *
+ * Returns 0 if the fence has not yet been signaled, 1 if the fence has
+ * been signaled without an error condition, or a negative error code
+ * if the fence has been completed in err.
+ */
+static inline int dma_fence_get_status_locked(struct dma_fence *fence)
+{
+	if (dma_fence_is_signaled_locked(fence))
+		return fence->error ?: 1;
+	else
+		return 0;
+}
+
+int dma_fence_get_status(struct dma_fence *fence);
+
+/**
+ * dma_fence_set_error - flag an error condition on the fence
+ * @fence: [in]	the dma_fence
+ * @error: [in]	the error to store
+ *
+ * Must be called before signaling.
+ */
+static inline void dma_fence_set_error(struct dma_fence *fence,
+				       int error)
+{
+	BUG_ON(test_bit(DMA_FENCE_FLAG_SIGNALED_BIT, &fence->flags));
+	BUG_ON(error >= 0 || error < -MAX_ERRNO);
+
+	fence->error = error;
 }
 
 signed long dma_fence_wait_timeout(struct dma_fence *,

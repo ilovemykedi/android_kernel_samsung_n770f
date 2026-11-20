@@ -332,7 +332,7 @@ static __init int proca_module_init(void)
 
 	proca_table_init(&g_proca_table);
 
-	security_add_hooks(proca_ops, ARRAY_SIZE(proca_ops), "proca_lsm");
+	security_add_hooks(proca_ops, ARRAY_SIZE(proca_ops));
 	five_add_hooks(five_ops, ARRAY_SIZE(five_ops));
 
 	PROCA_INFO_LOG("LSM module was initialized\n");

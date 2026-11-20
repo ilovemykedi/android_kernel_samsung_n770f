@@ -2935,15 +2935,15 @@ static void dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
 	dwc3_writel(dwc->regs, DWC3_DCFG, reg);
 
 	if (acc_dev_status && (dwc->rst_err_noti == false)) {
-		current_time.tv64 = ktime_to_ms(ktime_get_boottime());
+		current_time = ktime_to_ms(ktime_get_boottime());
 
 		if ((dwc->rst_err_cnt == 0) && (dwc->gadget.state < USB_STATE_CONFIGURED)) {
-			if ((current_time.tv64 - dwc->rst_time_before.tv64) < 1000) {
+			if ((current_time - dwc->rst_time_before) < 1000) {
 				dwc->rst_err_cnt++;
-				dwc->rst_time_first.tv64 = dwc->rst_time_before.tv64;
+				dwc->rst_time_first = dwc->rst_time_before;
 			}
 		} else {
-			if ((current_time.tv64 - dwc->rst_time_first.tv64) < 1000) {
+			if ((current_time - dwc->rst_time_first) < 1000) {
 				dwc->rst_err_cnt++;
 			} else {
 				dwc->rst_err_cnt = 0;
@@ -2957,9 +2957,9 @@ static void dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
 		}
 
 		pr_info("%s rst_err_cnt: %d, time_current: %lld, time_before: %lld\n",
-			__func__, dwc->rst_err_cnt, current_time.tv64, dwc->rst_time_before.tv64);
+			__func__, dwc->rst_err_cnt, current_time, dwc->rst_time_before);
 
-		dwc->rst_time_before.tv64 = current_time.tv64;
+		dwc->rst_time_before = current_time;
 	}
 
 	if (dwc->is_not_vbus_pad) {

@@ -14,6 +14,7 @@
 #include <linux/of.h>
 #include <linux/slab.h>
 #include <linux/cpu.h>
+#include <linux/cpuhotplug.h>
 #include <linux/cpumask.h>
 #include <linux/cpufreq.h>
 #include <linux/pm_opp.h>
@@ -616,24 +617,22 @@ static struct notifier_block exynos_cpufreq_policy_notifier = {
 	.notifier_call = exynos_cpufreq_policy_callback,
 };
 
-static int exynos_cpufreq_cpu_up_callback(struct notifier_block *notifier,
-					unsigned long action, void *hcpu)
+static int exynos_cpufreq_cpu_up_callback(unsigned int cpu)
 {
-	unsigned int cpu = (unsigned long)hcpu;
 	struct exynos_cpufreq_domain *domain;
 	struct cpumask mask;
 
 	/*
-	 * enable_nonboot_cpus() sends CPU_ONLINE_FROZEN notify event,
-	 * but cpu_up() sends just CPU_ONLINE. We don't want that
-	 * this callback does nothing before cpufreq_resume().
+	 * enable_nonboot_cpus() also runs this callback while tasks are
+	 * frozen. We don't want that this callback does anything before
+	 * cpufreq_resume().
 	 */
-	if (action != CPU_ONLINE && action != CPU_DOWN_FAILED)
-		return NOTIFY_OK;
+	if (cpuhp_tasks_frozen)
+		return 0;
 
 	domain = find_domain(cpu);
 	if (!domain)
-		return NOTIFY_BAD;
+		return 0;
 
 	/*
 	 * The first incomming cpu in domain enables frequency scaling
@@ -645,32 +644,25 @@ static int exynos_cpufreq_cpu_up_callback(struct notifier_block *notifier,
 		pm_qos_update_request(&domain->max_qos_req, domain->max_freq);
 	}
 
-	return NOTIFY_OK;
+	return 0;
 }
 
-static struct notifier_block __refdata exynos_cpufreq_cpu_up_notifier = {
-	.notifier_call = exynos_cpufreq_cpu_up_callback,
-	.priority = INT_MIN,
-};
-
-static int exynos_cpufreq_cpu_down_callback(struct notifier_block *notifier,
-					unsigned long action, void *hcpu)
+static int exynos_cpufreq_cpu_down_callback(unsigned int cpu)
 {
-	unsigned int cpu = (unsigned long)hcpu;
 	struct exynos_cpufreq_domain *domain;
 	struct cpumask mask;
 
 	/*
-	 * disable_nonboot_cpus() sends CPU_DOWN_PREPARE_FROZEN notify
-	 * event, but cpu_down() sends just CPU_DOWN_PREPARE. We don't
-	 * want that this callback does nothing after cpufreq_suspend().
+	 * disable_nonboot_cpus() also runs this callback while tasks are
+	 * frozen. We don't want that this callback does anything after
+	 * cpufreq_suspend().
 	 */
-	if (action != CPU_DOWN_PREPARE)
-		return NOTIFY_OK;
+	if (cpuhp_tasks_frozen)
+		return 0;
 
 	domain = find_domain(cpu);
 	if (!domain)
-		return NOTIFY_BAD;
+		return 0;
 
 	/*
 	 * The last outgoing cpu in domain limits frequency to minimum
@@ -682,16 +674,8 @@ static int exynos_cpufreq_cpu_down_callback(struct notifier_block *notifier,
 		disable_domain(domain);
 	}
 
-	return NOTIFY_OK;
+	return 0;
 }
-
-static struct notifier_block __refdata exynos_cpufreq_cpu_down_notifier = {
-	.notifier_call = exynos_cpufreq_cpu_down_callback,
-	/*
-	 * This notifier should be perform before cpufreq_cpu_notifier.
-	 */
-	.priority = INT_MIN + 2,
-};
 
 /*********************************************************************
  *                       EXTERNAL REFERENCE APIs                     *
@@ -1278,8 +1262,16 @@ static int __init exynos_cpufreq_init(void)
 
 	init_sysfs();
 
-	register_hotcpu_notifier(&exynos_cpufreq_cpu_up_notifier);
-	register_hotcpu_notifier(&exynos_cpufreq_cpu_down_notifier);
+	/*
+	 * Dynamic online state registered after the cpufreq core's: the
+	 * startup runs after cpufreq onlines a CPU and the teardown runs
+	 * before cpufreq offlines it (former INT_MIN notifier priorities).
+	 */
+	ret = cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE_DYN, "exynos/acme:online",
+					exynos_cpufreq_cpu_up_callback,
+					exynos_cpufreq_cpu_down_callback);
+	if (ret < 0)
+		pr_err("failed to register cpu hotplug callbacks\n");
 
 	cpufreq_register_notifier(&exynos_cpufreq_policy_notifier,
 					CPUFREQ_POLICY_NOTIFIER);

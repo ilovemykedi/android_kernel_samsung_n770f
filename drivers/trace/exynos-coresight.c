@@ -10,6 +10,7 @@
  */
 
 #include <linux/cpu.h>
+#include <linux/cpuhotplug.h>
 #include <linux/cpu_pm.h>
 #include <linux/module.h>
 #include <linux/spinlock.h>
@@ -526,30 +527,27 @@ static int exynos_cs_pm_notifier(struct notifier_block *self,
 	return NOTIFY_OK;
 }
 
-static int __cpuinit exynos_cs_cpu_notifier(struct notifier_block *nfb,
-		unsigned long action, void *hcpu)
+/*
+ * Former CPU_STARTING/CPU_DOWN_FAILED (resume) and CPU_DYING (suspend)
+ * notifier; runs on the hotplugged CPU with interrupts disabled. A failed
+ * hotplug out rolls back through the startup callback.
+ */
+static int exynos_cs_cpu_starting(unsigned int cpu)
 {
-	int cpu = (unsigned long)hcpu;
+	debug_resume_cpu(cpu);
+	return 0;
+}
 
-	switch (action & ~CPU_TASKS_FROZEN) {
-	case CPU_STARTING:
-	case CPU_DOWN_FAILED:
-		debug_resume_cpu(cpu);
-		break;
-	case CPU_DYING:
-		debug_suspend_cpu(cpu);
-		break;
-	}
-	return NOTIFY_OK;
+static int exynos_cs_cpu_dying(unsigned int cpu)
+{
+	debug_suspend_cpu(cpu);
+	return 0;
 }
 
 static struct notifier_block __cpuinitdata exynos_cs_pm_notifier_block = {
 	.notifier_call = exynos_cs_pm_notifier,
 };
 
-static struct notifier_block __cpuinitdata exynos_cs_cpu_notifier_block = {
-	.notifier_call = exynos_cs_cpu_notifier,
-};
 
 static int __init exynos_cs_debug_init(void)
 {
@@ -566,7 +564,10 @@ static int __init exynos_cs_debug_init(void)
 	if (ret < 0)
 		goto err;
 
-	ret = register_cpu_notifier(&exynos_cs_cpu_notifier_block);
+	ret = cpuhp_setup_state_nocalls(CPUHP_AP_EXYNOS_CORESIGHT_STARTING,
+					"exynos/coresight:starting",
+					exynos_cs_cpu_starting,
+					exynos_cs_cpu_dying);
 	if (ret < 0)
 		goto err;
 

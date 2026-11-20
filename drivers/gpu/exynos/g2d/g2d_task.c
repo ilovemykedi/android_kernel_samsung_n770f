@@ -314,9 +314,9 @@ void g2d_start_task(struct g2d_task *task)
 	kref_put(&task->starter, g2d_task_direct_schedule);
 }
 
-void g2d_fence_callback(struct fence *fence, struct fence_cb *cb)
+void g2d_fence_callback(struct dma_fence *fence, struct dma_fence_cb *cb)
 {
-	struct g2d_layer *layer = container_of(cb, struct g2d_layer, fence_cb);
+	struct g2d_layer *layer = container_of(cb, struct g2d_layer, dma_fence_cb);
 	unsigned long flags;
 
 	spin_lock_irqsave(&layer->task->fence_timeout_lock, flags);

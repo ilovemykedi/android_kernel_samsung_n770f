@@ -42,8 +42,6 @@ seqno-fence.o: drivers/dma-buf/seqno-fence.c include/linux/kconfig.h \
   include/uapi/linux/kernel.h include/uapi/linux/sysinfo.h \
   arch/arm64/include/asm/cache.h arch/arm64/include/asm/cachetype.h \
   arch/arm64/include/asm/cputype.h arch/arm64/include/asm/sysreg.h \
-  arch/arm64/include/asm/opcodes.h \
-  arch/arm64/include/../../arm/include/asm/opcodes.h \
   include/linux/mmzone.h include/linux/spinlock.h \
   include/linux/preempt.h include/linux/list.h include/linux/poison.h \
   include/uapi/linux/const.h arch/arm64/include/generated/asm/preempt.h \
@@ -85,10 +83,10 @@ seqno-fence.o: drivers/dma-buf/seqno-fence.c include/linux/kconfig.h \
   include/linux/errno.h include/uapi/linux/errno.h \
   arch/arm64/include/generated/asm/errno.h \
   include/uapi/asm-generic/errno.h include/uapi/asm-generic/errno-base.h \
-  include/linux/mutex.h include/linux/osq_lock.h include/linux/rwsem.h \
-  include/linux/err.h arch/arm64/include/generated/asm/rwsem.h \
-  include/asm-generic/rwsem.h include/linux/srcu.h \
-  include/linux/rcupdate.h include/linux/cpumask.h \
+  include/linux/mutex.h include/linux/osq_lock.h \
+  include/linux/debug_locks.h include/linux/rwsem.h include/linux/err.h \
+  arch/arm64/include/generated/asm/rwsem.h include/asm-generic/rwsem.h \
+  include/linux/srcu.h include/linux/rcupdate.h include/linux/cpumask.h \
   include/linux/completion.h include/linux/debugobjects.h \
   include/linux/ktime.h include/linux/time.h include/linux/math64.h \
   arch/arm64/include/generated/asm/div64.h include/asm-generic/div64.h \
@@ -151,10 +149,9 @@ seqno-fence.o: drivers/dma-buf/seqno-fence.c include/linux/kconfig.h \
   include/uapi/linux/bpf_common.h include/linux/psi_types.h \
   include/linux/kthread.h include/linux/kref.h \
   include/linux/cgroup_subsys.h include/linux/sec_debug_types.h \
-  include/linux/seqno-fence.h include/linux/fence.h \
+  include/linux/seqno-fence.h include/linux/dma-fence.h \
   include/linux/dma-buf.h include/linux/file.h \
-  include/linux/scatterlist.h include/linux/mm.h \
-  include/linux/debug_locks.h include/linux/range.h \
+  include/linux/scatterlist.h include/linux/mm.h include/linux/range.h \
   include/linux/bit_spinlock.h include/linux/shrinker.h \
   include/linux/page_ext.h include/linux/stacktrace.h \
   include/linux/stackdepot.h include/linux/page_ref.h \
@@ -198,5 +195,4 @@ seqno-fence.o: drivers/dma-buf/seqno-fence.c include/linux/kconfig.h \
   arch/arm64/include/asm/device.h include/linux/pm_wakeup.h \
   include/linux/dma-debug.h include/linux/dma-direction.h \
   include/linux/kmemcheck.h arch/arm64/include/asm/dma-mapping.h \
-  arch/arm64/include/asm/xen/hypervisor.h \
-  arch/arm64/include/../../arm/include/asm/xen/hypervisor.h
+  arch/arm64/include/asm/xen/hypervisor.h include/xen/arm/hypervisor.h

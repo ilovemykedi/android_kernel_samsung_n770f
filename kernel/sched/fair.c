@@ -3452,18 +3452,6 @@ void sync_entity_load_avg(struct sched_entity *se)
  * Task first catches up with cfs_rq, and then subtract
  * itself from the cfs_rq (task must be off the queue now).
  */
-static void sync_entity_load_avg(struct sched_entity *se)
-{
-	struct cfs_rq *cfs_rq = cfs_rq_of(se);
-
-	last_update_time = cfs_rq_last_update_time(cfs_rq);
-	__update_load_avg(last_update_time, cpu_of(rq_of(cfs_rq)), &se->avg, 0, 0, NULL);
-}
-
-/*
- * Task first catches up with cfs_rq, and then subtract
- * itself from the cfs_rq (task must be off the queue now).
- */
 static void remove_entity_load_avg(struct sched_entity *se)
 {
 	struct cfs_rq *cfs_rq = cfs_rq_of(se);
@@ -6874,24 +6862,6 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 	schedstat_inc(this_rq()->eas_stats.fbt_count);
 
 	return target_cpu;
-}
-
-/*
- * cpu_util_wake: Compute cpu utilization with any contributions from
- * the waking task p removed.
- */
-static int cpu_util_wake(int cpu, struct task_struct *p)
-{
-	unsigned long util, capacity;
-
-	/* Task has no contribution or is new */
-	if (cpu != task_cpu(p) || !p->se.avg.last_update_time)
-		return cpu_util(cpu);
-
-	capacity = capacity_orig_of(cpu);
-	util = max_t(long, cpu_rq(cpu)->cfs.avg.util_avg - task_util(p), 0);
-
-	return (util >= capacity) ? capacity : util;
 }
 
 /*

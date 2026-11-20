@@ -16,6 +16,7 @@
 
 #include <asm/page.h>
 #include <linux/dma-mapping.h>
+#include <linux/cpuhotplug.h>
 #include <linux/dma-contiguous.h>
 #include <linux/err.h>
 #include <linux/highmem.h>
@@ -503,28 +504,23 @@ err_create_pool:
 #define BIG_CORE_NUM_FIRST 4
 #define BIG_CORE_NUM_LAST 7
 
-static int ion_rbin_heap_cpu_callback(struct notifier_block *nfb,
-				      unsigned long action, void *hcpu)
+/* Former CPU_UP_PREPARE/CPU_DEAD/CPU_UP_CANCELED notifier */
+static int ion_rbin_heap_cpu_callback(unsigned int cpu)
 {
 	int i;
 	struct cpumask cpu_mask;
 
 	if (!rbin_heap)
-		return NOTIFY_OK;
+		return 0;
 
-	switch (action & ~CPU_TASKS_FROZEN) {
-	case CPU_UP_PREPARE:
-	case CPU_DEAD:
-	case CPU_UP_CANCELED:
-		cpumask_clear(&cpu_mask);
-		for (i = BIG_CORE_NUM_FIRST; i <= BIG_CORE_NUM_LAST; i++)
-			cpumask_set_cpu(i, &cpu_mask);
-		if (cpumask_any_and(cpu_online_mask, &cpu_mask) >= nr_cpu_ids)
-			cpumask_setall(&cpu_mask);
-		set_cpus_allowed_ptr(rbin_heap->task, &cpu_mask);
-	}
+	cpumask_clear(&cpu_mask);
+	for (i = BIG_CORE_NUM_FIRST; i <= BIG_CORE_NUM_LAST; i++)
+		cpumask_set_cpu(i, &cpu_mask);
+	if (cpumask_any_and(cpu_online_mask, &cpu_mask) >= nr_cpu_ids)
+		cpumask_setall(&cpu_mask);
+	set_cpus_allowed_ptr(rbin_heap->task, &cpu_mask);
 
-	return NOTIFY_OK;
+	return 0;
 }
 
 struct ion_heap *ion_rbin_heap_create(struct ion_platform_heap *data)
@@ -556,8 +552,10 @@ struct ion_heap *ion_rbin_heap_create(struct ion_platform_heap *data)
 	rbin_heap = heap;
 
 	sched_setscheduler(heap->task, SCHED_NORMAL, &param);
-	ion_rbin_heap_cpu_callback(NULL, CPU_UP_PREPARE, NULL);
-	hotcpu_notifier(ion_rbin_heap_cpu_callback, 0);
+	ion_rbin_heap_cpu_callback(0);
+	cpuhp_setup_state_nocalls(CPUHP_BP_PREPARE_DYN, "ion/rbin:prepare",
+				  ion_rbin_heap_cpu_callback,
+				  ion_rbin_heap_cpu_callback);
 
 	return &heap->heap;
 

@@ -443,44 +443,6 @@ static inline bool cpu_smt_allowed(unsigned int cpu)
 static inline bool cpu_smt_allowed(unsigned int cpu) { return true; }
 #endif
 
-/* Need to know about CPUs going up/down? */
-int register_cpu_notifier(struct notifier_block *nb)
-{
-	int ret;
-	cpu_maps_update_begin();
-	ret = raw_notifier_chain_register(&cpu_chain, nb);
-	cpu_maps_update_done();
-	return ret;
-}
-
-int __register_cpu_notifier(struct notifier_block *nb)
-{
-	return raw_notifier_chain_register(&cpu_chain, nb);
-}
-
-static int __cpu_notify(unsigned long val, unsigned int cpu, int nr_to_call,
-			int *nr_calls)
-{
-	unsigned long mod = cpuhp_tasks_frozen ? CPU_TASKS_FROZEN : 0;
-	void *hcpu = (void *)(long)cpu;
-
-	int ret;
-
-	ret = __raw_notifier_call_chain(&cpu_chain, val | mod, hcpu, nr_to_call,
-					nr_calls);
-
-	return notifier_to_errno(ret);
-}
-
-static int cpu_notify(unsigned long val, unsigned int cpu)
-{
-	return __cpu_notify(val, cpu, -1, NULL);
-}
-
-static void cpu_notify_nofail(unsigned long val, unsigned int cpu)
-{
-	BUG_ON(cpu_notify(val, cpu));
-}
 
 /* Notifier wrappers for transitioning to state machine */
 
@@ -772,22 +734,6 @@ void __init cpuhp_threads_init(void)
 	kthread_unpark(this_cpu_read(cpuhp_state.thread));
 }
 
-EXPORT_SYMBOL(register_cpu_notifier);
-EXPORT_SYMBOL(__register_cpu_notifier);
-void unregister_cpu_notifier(struct notifier_block *nb)
-{
-	cpu_maps_update_begin();
-	raw_notifier_chain_unregister(&cpu_chain, nb);
-	cpu_maps_update_done();
-}
-EXPORT_SYMBOL(unregister_cpu_notifier);
-
-void __unregister_cpu_notifier(struct notifier_block *nb)
-{
-	raw_notifier_chain_unregister(&cpu_chain, nb);
-}
-EXPORT_SYMBOL(__unregister_cpu_notifier);
-
 #ifdef CONFIG_HOTPLUG_CPU
 /**
  * clear_tasks_mm_cpumask - Safely clear tasks' mm_cpumask for a CPU
@@ -1011,9 +957,6 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
 
 out:
 	cpu_hotplug_done();
-	/* This post dead nonsense must die */
-	if (!ret && hasdied)
-		cpu_notify_nofail(CPU_POST_DEAD, cpu);
 	arch_smt_update();
 	return ret;
 }
@@ -1091,7 +1034,6 @@ int __ref _cpus_down(const struct cpumask *cpus, enum cpuhp_state target)
 	cpumask_t take_down_cpus = CPU_MASK_NONE;
 	int prev_state[8] = {0};
 	int ret = 0, cpu;
-	bool hasdied = false;
 
 	cpu_hotplug_begin();
 
@@ -1161,7 +1103,6 @@ int __ref _cpus_down(const struct cpumask *cpus, enum cpuhp_state target)
 			goto down_fail;
 	}
 
-	hasdied = true;
 	goto out;
 
 down_fail:
@@ -1179,11 +1120,6 @@ down_fail:
 	}
 out:
 	cpu_hotplug_done();
-	/* This pot dead nonsense must die */
-	if (!ret && hasdied) {
-		for_each_cpu(cpu, &take_down_cpus)
-			cpu_notify_nofail(CPU_POST_DEAD, cpu);
-	}
 
 	cpuset_wait_for_hotplug();
 
@@ -1476,8 +1412,6 @@ static int _cpus_up(const struct cpumask *cpus, int tasks_frozen, enum cpuhp_sta
 	goto out;
 
 cpu_up_fail:
-	for_each_cpu(cpu, &failed_cpus)
-		cpu_notify(CPU_UP_CANCELED, cpu);
 bringup_fail:
 	for_each_cpu(cpu, &bringup_cpus) {
 		struct cpuhp_cpu_state *st = per_cpu_ptr(&cpuhp_state, cpu);
@@ -1776,16 +1710,6 @@ static struct cpuhp_step cpuhp_bp_states[] = {
 		.teardown.single	= rcutree_dead_cpu,
 	},
 	/*
-	 * Preparatory and dead notifiers. Will be replaced once the notifiers
-	 * are converted to states.
-	 */
-	[CPUHP_NOTIFY_PREPARE] = {
-		.name			= "notify:prepare",
-		.startup.single		= notify_prepare,
-		.teardown.single	= notify_dead,
-		.cant_stop		= true,
-	},
-	/*
 	 * On the tear-down path, timers_dead_cpu() must be invoked
 	 * before blk_mq_queue_reinit_notify() from notify_dead(),
 	 * otherwise a RCU stall occurs.
@@ -2023,26 +1947,6 @@ static void cpuhp_rollback_install(int failedcpu, enum cpuhp_state state,
 		if (cpustate >= state)
 			cpuhp_issue_call(cpu, state, false, node);
 	}
-}
-
-/*
- * Returns a free for dynamic slot assignment of the Online state. The states
- * are protected by the cpuhp_slot_states mutex and an empty slot is identified
- * by having no name assigned.
- */
-static int cpuhp_reserve_state(enum cpuhp_state state)
-{
-	enum cpuhp_state i;
-
-	for (i = CPUHP_AP_ONLINE_DYN; i <= CPUHP_AP_ONLINE_DYN_END; i++) {
-		if (cpuhp_ap_states[i].name)
-			continue;
-
-		cpuhp_ap_states[i].name = "Reserved";
-		return i;
-	}
-	WARN(1, "No more dynamic states available for CPU hotplug\n");
-	return -ENOSPC;
 }
 
 int __cpuhp_state_add_instance(enum cpuhp_state state, struct hlist_node *node,

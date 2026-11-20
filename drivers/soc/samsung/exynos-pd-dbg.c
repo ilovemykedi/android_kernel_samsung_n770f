@@ -82,11 +82,11 @@ static void exynos_pd_dbg_summary_show(struct generic_pm_domain *genpd)
 	struct pm_domain_data *pm_data;
 	struct gpd_link *link;
 
-	mutex_lock(&genpd->lock);
+	mutex_lock(&genpd->mlock);
 
 	if (genpd->status >= ARRAY_SIZE(gpd_status_lookup)) {
 		pr_err("%s invalid GPD_STATUS\n", EXYNOS_PD_DBG_PREFIX);
-		mutex_unlock(&genpd->lock);
+		mutex_unlock(&genpd->mlock);
 		return ;
 	}
 
@@ -110,7 +110,7 @@ static void exynos_pd_dbg_summary_show(struct generic_pm_domain *genpd)
 	list_for_each_entry(link, &genpd->master_links, master_node)
 		exynos_pd_dbg_summary_show(link->slave);
 
-	mutex_unlock(&genpd->lock);
+	mutex_unlock(&genpd->mlock);
 }
 
 static ssize_t exynos_pd_dbg_read(struct file *file, char __user *user_buf,

@@ -29,7 +29,7 @@
 static DEFINE_SPINLOCK(kbase_fence_lock);
 
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE)
-struct fence *
+struct dma_fence *
 kbase_fence_out_new(struct kbase_jd_atom *katom)
 #else
 struct dma_fence *
@@ -37,7 +37,7 @@ kbase_fence_out_new(struct kbase_jd_atom *katom)
 #endif
 {
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE)
-	struct fence *fence;
+	struct dma_fence *fence;
 #else
 	struct dma_fence *fence;
 #endif
@@ -72,7 +72,7 @@ kbase_fence_free_callbacks(struct kbase_jd_atom *katom)
 		bool ret;
 
 		/* Cancel callbacks that hasn't been called yet. */
-		ret = dma_fence_remove_callback(cb->fence, &cb->fence_cb);
+		ret = dma_fence_remove_callback(cb->fence, &cb->dma_fence_cb);
 		if (ret) {
 			int ret;
 
@@ -100,8 +100,8 @@ kbase_fence_free_callbacks(struct kbase_jd_atom *katom)
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE)
 int
 kbase_fence_add_callback(struct kbase_jd_atom *katom,
-			 struct fence *fence,
-			 fence_func_t callback)
+			 struct dma_fence *fence,
+			 dma_fence_func_t callback)
 #else
 int
 kbase_fence_add_callback(struct kbase_jd_atom *katom,
@@ -124,7 +124,7 @@ kbase_fence_add_callback(struct kbase_jd_atom *katom,
 	INIT_LIST_HEAD(&kbase_fence_cb->node);
 	atomic_inc(&katom->dma_fence.dep_count);
 
-	err = dma_fence_add_callback(fence, &kbase_fence_cb->fence_cb,
+	err = dma_fence_add_callback(fence, &kbase_fence_cb->dma_fence_cb,
 				     callback);
 	if (err == -ENOENT) {
 		/* Fence signaled, get the completion result */

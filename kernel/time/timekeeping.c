@@ -479,13 +479,6 @@ u64 notrace ktime_get_boot_fast_ns(void)
 EXPORT_SYMBOL_GPL(ktime_get_boot_fast_ns);
 
 /* Suspend-time cycles value for halted fast timekeeper. */
-static cycle_t cycles_at_suspend;
-
-	return (ktime_get_mono_fast_ns() + ktime_to_ns(tk->offs_boot));
-}
-EXPORT_SYMBOL_GPL(ktime_get_boot_fast_ns);
-
-/* Suspend-time cycles value for halted fast timekeeper. */
 static u64 cycles_at_suspend;
 
 static u64 dummy_clock_read(struct clocksource *cs)

@@ -16,6 +16,7 @@
 #include <linux/sysfs.h>
 #include <linux/slab.h>
 #include <linux/cpu.h>
+#include <linux/cpuhotplug.h>
 #include <linux/psci.h>
 #include <linux/cpuidle_profiler.h>
 #include <linux/exynos-ss.h>
@@ -720,27 +721,25 @@ int exynos_hotplug_out_callback(unsigned int cpu)
 }
 EXPORT_SYMBOL_GPL(exynos_hotplug_out_callback);
 
-static int exynos_cpu_callback(struct notifier_block *nfb,
-				 unsigned long action, void *hcpu)
+/*
+ * Former CPU_DEAD notifier with the highest priority: wait until the dead CPU
+ * is really powered down. CPUHP_BP_EXYNOS_POWERMODE_DEAD sits right below
+ * CPUHP_BRINGUP_CPU, so it is the first boot processor teardown step.
+ */
+static int exynos_cpu_dead(unsigned int cpu)
 {
-	unsigned int cpu = (unsigned long)hcpu;
 	unsigned long timeout = jiffies + msecs_to_jiffies(2000);
 
-	switch (action) {
-	case CPU_DEAD:
-	case CPU_DEAD_FROZEN:
-		while (exynos_cpu.power_state(cpu)) {
-			if (time_before(jiffies, timeout)) {
-				udelay(10);
-				continue;
-			} else {
-				BUG();
-			}
+	while (exynos_cpu.power_state(cpu)) {
+		if (time_before(jiffies, timeout)) {
+			udelay(10);
+			continue;
+		} else {
+			BUG();
 		}
-		break;
 	}
 
-	return NOTIFY_OK;
+	return 0;
 }
 #endif
 
@@ -916,7 +915,8 @@ static int __init exynos_powermode_init(void)
 	cpufreq_register_notifier(&exynos_powermode_cpufreq_notifier,
 					CPUFREQ_TRANSITION_NOTIFIER);
 
-	__hotcpu_notifier(exynos_cpu_callback, INT_MAX);
+	cpuhp_setup_state_nocalls(CPUHP_BP_EXYNOS_POWERMODE_DEAD,
+				  "exynos/powermode:dead", NULL, exynos_cpu_dead);
 
 	return 0;
 }

@@ -581,7 +581,7 @@ void register_init_log_hook_func(void (*func)(const char *buf, size_t size))
 static size_t hook_size;
 static char hook_text[LOG_LINE_MAX + PREFIX_MAX];
 static void (*func_hook_logbuf)(const char *buf, size_t size);
-static size_t msg_print_text(const struct printk_log *msg, enum log_flags prev,
+static size_t msg_print_text(const struct printk_log *msg,
 				bool syslog, char *buf, size_t size);
 void register_hook_logbuf(void (*func)(const char *buf, size_t size))
 {
@@ -601,7 +601,7 @@ void register_hook_logbuf(void (*func)(const char *buf, size_t size))
 		step_idx = log_first_idx;
 		for (step_seq = start; step_seq < end; step_seq++) {
 			msg = (struct printk_log *)(log_buf + step_idx);
-			hook_size = msg_print_text(msg, msg->flags,
+			hook_size = msg_print_text(msg,
 					true, hook_text, LOG_LINE_MAX + PREFIX_MAX);
 			func(hook_text, hook_size);
 			step_idx = log_next(step_idx);
@@ -633,7 +633,7 @@ void register_first_kmsg_hook_func(void (*func)(const char *buf, size_t size))
 		step_idx = log_first_idx;
 		for (step_seq = start; step_seq < end; step_seq++) {
 			msg = (struct printk_log *)(log_buf + step_idx);
-			hook_size = msg_print_text(msg, msg->flags,
+			hook_size = msg_print_text(msg,
 					true, hook_text, LOG_LINE_MAX + PREFIX_MAX);
 			func(hook_text, hook_size);
 			step_idx = log_next(step_idx);
@@ -741,7 +741,7 @@ static int log_store(int facility, int level,
 #endif
 #ifdef CONFIG_EXYNOS_SNAPSHOT
 	if (func_hook_logbuf) {
-		hook_size = msg_print_text(msg, msg->flags,
+		hook_size = msg_print_text(msg,
 				true, hook_text, LOG_LINE_MAX + PREFIX_MAX);
 		func_hook_logbuf(hook_text, hook_size);
 
@@ -1177,12 +1177,7 @@ static void __init log_buf_len_update(unsigned size)
 /* save requested log_buf_len since it's too early to process it */
 static int __init log_buf_len_setup(char *str)
 {
-	unsigned int size;
-
-	if (!str)
-		return -EINVAL;
-
-	size = memparse(str, &str);
+	unsigned size = memparse(str, &str);
 
 	log_buf_len_update(size);
 
@@ -1515,7 +1510,6 @@ static int syslog_print_all(char __user *buf, int size, bool clear, bool knox)
 		}
 		/* } SecProductFeature_KNOX.SEC_PRODUCT_FEATURE_KNOX_SUPPORT_MDM */
 
-		prev = 0;
 		while (seq < log_next_seq) {
 			struct printk_log *msg = log_from_idx(idx);
 
@@ -1535,7 +1529,6 @@ static int syslog_print_all(char __user *buf, int size, bool clear, bool knox)
 		}
 		/* } SecProductFeature_KNOX.SEC_PRODUCT_FEATURE_KNOX_SUPPORT_MDM */
 
-		prev = 0;
 		while (len > size && seq < log_next_seq) {
 			struct printk_log *msg = log_from_idx(idx);
 
@@ -1865,36 +1858,6 @@ static bool cont_add(int facility, int level, enum log_flags flags, const char *
 		cont_flush();
 
 	return true;
-}
-
-static size_t cont_print_text(char *text, size_t size)
-{
-	size_t textlen = 0;
-	size_t len;
-
-	if (cont.cons == 0 && (console_prev & LOG_NEWLINE)) {
-		textlen += print_time(cont.ts_nsec, text);
-		*(text+textlen) = ' ';
-		textlen += print_process(NULL, NULL);
-		size -= textlen;
-	}
-
-	len = cont.len - cont.cons;
-	if (len > 0) {
-		if (len+1 > size)
-			len = size-1;
-		memcpy(text + textlen, cont.buf + cont.cons, len);
-		textlen += len;
-		cont.cons = cont.len;
-	}
-
-	if (cont.flushed) {
-		if (cont.flags & LOG_NEWLINE)
-			text[textlen++] = '\n';
-		/* got everything, release buffer */
-		cont.len = 0;
-	}
-	return textlen;
 }
 
 static size_t log_output(int facility, int level, enum log_flags lflags, const char *dict, size_t dictlen, char *text, size_t text_len)
@@ -2341,7 +2304,6 @@ void resume_console(void)
 static int console_cpu_notify(unsigned int cpu)
 {
 	if (!cpuhp_tasks_frozen) {
-		/* If trylock fails, someone else is doing the printing */
 		if (console_trylock())
 			console_unlock();
 	}
@@ -2465,7 +2427,7 @@ void console_unlock(void)
 	}
 
 	/*
-	 * Console drivers are called with interrupts disabled, so
+	 * Console drivers are called under logbuf_lock, so
 	 * @console_may_schedule should be cleared before; however, we may
 	 * end up dumping a lot of lines, for example, if called from
 	 * console registration path, and should invoke cond_resched()
@@ -2473,15 +2435,11 @@ void console_unlock(void)
 	 * scheduling stall on a slow console leading to RCU stall and
 	 * softlockup warnings which exacerbate the issue with more
 	 * messages practically incapacitating the system.
-	 *
-	 * console_trylock() is not able to detect the preemptive
-	 * context reliably. Therefore the value must be stored before
-	 * and cleared after the the "again" goto label.
 	 */
 	do_cond_resched = console_may_schedule;
-again:
 	console_may_schedule = 0;
 
+again:
 	/*
 	 * We released the console_sem lock, so we need to recheck if
 	 * cpu is online and (if not) is there at least one CON_ANYTIME

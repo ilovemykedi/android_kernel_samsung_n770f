@@ -157,7 +157,7 @@ static void __copy_timestamp(struct vb2_buffer *vb, void *pb)
 			}
 
 			sync_file = sync_file_create(&pt->base);
-			fence_put(&pt->base);
+			dma_fence_put(&pt->base);
 			if (!sync_file) {
 				put_unused_fd(fd);
 				dprintk(1, "qbuf: failed to create fence\n");

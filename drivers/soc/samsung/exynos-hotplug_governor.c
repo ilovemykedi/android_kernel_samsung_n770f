@@ -10,6 +10,7 @@
 */
 
 #include <linux/kthread.h>
+#include <linux/cpuhotplug.h>
 #include <linux/slab.h>
 #include <linux/pm_qos.h>
 #include <linux/sched.h>
@@ -243,19 +244,11 @@ static struct notifier_block exynos_hpgov_policy_nb = {
 
 static int exynos_hpgov_max_freq_control(unsigned int cpu)
 {
-	unsigned long timeout;
-
 	if (exynos_hpgov.suspend)
 		return 0;
 
-	/* if cpufreq_update_policy is failed after 50ms, cancel cpu_up */
-	timeout = jiffies + msecs_to_jiffies(50);
-	while (cpufreq_update_policy(cpu)) {
-		if (time_after(jiffies, timeout)) {
-			pr_info("%s: failed to control max_freq\n", __func__);
-			return -1;
-		}
-	}
+	/* cpufreq_update_policy() returns void since v4.10 */
+	cpufreq_update_policy(cpu);
 
 	if (!exynos_cpufreq_allow_change_max(cpu, get_hpgov_maxfreq())) {
 		pr_warn("%s: current frequency is higher than max freq\n", __func__);
@@ -268,19 +261,20 @@ static int exynos_hpgov_max_freq_control(unsigned int cpu)
 	return 0;
 }
 
-static int exynos_hpgov_hp_callback(struct notifier_block *nfb,
-					 unsigned long action, void *hcpu)
+/*
+ * Boot processor prepare state (former CPU_UP_PREPARE notifier): may veto
+ * the bring-up by returning an error.
+ */
+static int exynos_hpgov_cpu_prepare(unsigned int cpu)
 {
-	unsigned int cpu = (unsigned long)hcpu;
 	int big_cpu_cnt;
 	struct cpumask mask;
 
 	/* skip little cpu */
 	if (cpumask_test_cpu(cpu, cpu_coregroup_mask(0)))
-		return NOTIFY_OK;
+		return 0;
 
-	switch (action & ~CPU_TASKS_FROZEN) {
-	case CPU_UP_PREPARE:
+	{
 		if (cpumask_test_cpu(cpu, &exynos_hpgov.big_cpu_mask))
 			pr_warn("cpuhp: CPU%d was already alive",cpu);
 
@@ -291,14 +285,28 @@ static int exynos_hpgov_hp_callback(struct notifier_block *nfb,
 		 * of fast_cpu domain
 		 */
 		if (big_cpu_cnt == 1)
-			break;
+			return 0;
 
 		cpumask_and(&mask, &exynos_hpgov.big_cpu_mask, cpu_online_mask);
 		if (exynos_hpgov_max_freq_control(cpumask_first(&mask)))
-			return NOTIFY_BAD;
-		break;
-	case CPU_DEAD:
-	case CPU_UP_CANCELED:
+			return -EBUSY;
+	}
+
+	return 0;
+}
+
+/*
+ * Boot processor dead state (former CPU_DEAD/CPU_UP_CANCELED notifier).
+ */
+static int exynos_hpgov_cpu_dead(unsigned int cpu)
+{
+	int big_cpu_cnt;
+
+	/* skip little cpu */
+	if (cpumask_test_cpu(cpu, cpu_coregroup_mask(0)))
+		return 0;
+
+	{
 		if (!cpumask_test_cpu(cpu, &exynos_hpgov.big_cpu_mask))
 			pr_warn("cpuhp: CPU%d was already dead",cpu);
 
@@ -309,16 +317,13 @@ static int exynos_hpgov_hp_callback(struct notifier_block *nfb,
 		 * of fast_cpu domain
 		 */
 		if (big_cpu_cnt == 0)
-			break;
+			return 0;
 
 		if (exynos_hpgov_max_freq_control(cpumask_first(&exynos_hpgov.big_cpu_mask)))
-			return NOTIFY_BAD;
-		break;
-	default:
-		break;
+			pr_warn("cpuhp: CPU%d max freq control failed\n", cpu);
 	}
 
-	return NOTIFY_OK;
+	return 0;
 }
 
 /**********************************************************************************/
@@ -1213,7 +1218,10 @@ static int __init exynos_hpgov_init(void)
 	cpufreq_register_notifier(&exynos_hpgov_policy_nb,
 					CPUFREQ_POLICY_NOTIFIER);
 
-	__hotcpu_notifier(exynos_hpgov_hp_callback, INT_MAX-1);
+	if (cpuhp_setup_state_nocalls(CPUHP_BP_PREPARE_DYN, "exynos/hpgov:prepare",
+				      exynos_hpgov_cpu_prepare,
+				      exynos_hpgov_cpu_dead) < 0)
+		pr_err("exynos-hpgov: failed to register cpu hotplug callbacks\n");
 
 	cpumask_clear(&exynos_hpgov.big_cpu_mask);
 	cpumask_xor(&exynos_hpgov.big_cpu_mask,

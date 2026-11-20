@@ -133,8 +133,6 @@ struct bio {
 #define BVEC_POOL_OFFSET	(16 - BVEC_POOL_BITS)
 #define BVEC_POOL_IDX(bio)	((bio)->bi_flags >> BVEC_POOL_OFFSET)
 
-#endif /* CONFIG_BLOCK */
-
 #define __SEC_BYPASS	(0)
 #define SEC_BYPASS	(1ULL << __SEC_BYPASS)
 

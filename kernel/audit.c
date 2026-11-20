@@ -403,9 +403,6 @@ static void kauditd_printk_skb(struct sk_buff *skb)
 	}
 #endif
 // ] SEC_SELINUX_PORTING_COMMON
-
-
-	audit_hold_skb(skb);
 }
 
 /**

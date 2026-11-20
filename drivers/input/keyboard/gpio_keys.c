@@ -924,7 +924,8 @@ gpio_keys_get_devtree_pdata(struct device *dev)
 	for_each_available_child_of_node(node, pp) {
 		enum of_gpio_flags flags;
 
-		button = &pdata->buttons[i++];
+		/* buttons[] is allocated together with pdata above, so writable */
+		button = (struct gpio_keys_button *)&pdata->buttons[i++];
 
 		button->gpio = of_get_gpio_flags(pp, 0, &flags);
 		if (button->gpio < 0) {
@@ -1045,7 +1046,8 @@ static int gpio_keys_probe(struct platform_device *pdev)
 		__set_bit(EV_REP, input->evbit);
 
 	for (i = 0; i < pdata->nbuttons; i++) {
-		struct gpio_keys_button *button = &pdata->buttons[i];
+		struct gpio_keys_button *button =
+			(struct gpio_keys_button *)&pdata->buttons[i];
 		struct gpio_button_data *bdata = &ddata->data[i];
 
 		error = gpio_keys_setup_key(pdev, input, bdata, button);

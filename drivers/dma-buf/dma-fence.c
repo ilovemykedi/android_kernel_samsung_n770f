@@ -282,6 +282,26 @@ int dma_fence_add_callback(struct dma_fence *fence, struct dma_fence_cb *cb,
 EXPORT_SYMBOL(dma_fence_add_callback);
 
 /**
+ * dma_fence_get_status - returns the status upon completion
+ * @fence: [in]	the dma_fence to query
+ *
+ * This wraps dma_fence_get_status_locked() to return the error status
+ * condition on a signaled fence.
+ */
+int dma_fence_get_status(struct dma_fence *fence)
+{
+	unsigned long flags;
+	int status;
+
+	spin_lock_irqsave(fence->lock, flags);
+	status = dma_fence_get_status_locked(fence);
+	spin_unlock_irqrestore(fence->lock, flags);
+
+	return status;
+}
+EXPORT_SYMBOL(dma_fence_get_status);
+
+/**
  * dma_fence_remove_callback - remove a callback from the signaling list
  * @fence:	[in]	the fence to wait on
  * @cb:		[in]	the callback to remove

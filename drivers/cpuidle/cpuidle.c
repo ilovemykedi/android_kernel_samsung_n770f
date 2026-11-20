@@ -15,6 +15,7 @@
 #include <linux/notifier.h>
 #include <linux/pm_qos.h>
 #include <linux/cpu.h>
+#include <linux/cpuhotplug.h>
 #include <linux/cpuidle.h>
 #include <linux/ktime.h>
 #include <linux/hrtimer.h>
@@ -662,60 +663,39 @@ static inline void latency_notifier_init(struct notifier_block *n)
 
 #endif /* CONFIG_SMP */
 
-/* during hotplug out in progress, disable cpuidle for faster hotplug out */
-static int exynos_cpuidle_hp_out_callback(struct notifier_block *nfb,
-					unsigned long action, void *hcpu)
+/*
+ * During hotplug out in progress, disable cpuidle for faster hotplug out.
+ * Registered late as a dynamic online state, so the teardown runs first on
+ * the way down and the startup runs last on the way up (or on rollback of a
+ * failed hotplug out), as the former INT_MAX/INT_MIN notifiers did.
+ * Suspend/resume (tasks frozen) is left alone as before.
+ */
+static int exynos_cpuidle_hp_out_callback(unsigned int cpu)
 {
-	unsigned int cpu = (unsigned long)hcpu;
 	struct cpuidle_device *dev = per_cpu(cpuidle_devices, cpu);
 
-	if (dev) {
-		switch (action) {
-		case CPU_DOWN_PREPARE:
-			cpuidle_disable_device(dev);
-			break;
-
-		case CPU_DOWN_FAILED:
-			cpuidle_enable_device(dev);
-			break;
-		}
-	}
-	return NOTIFY_OK;
+	if (dev && !cpuhp_tasks_frozen)
+		cpuidle_disable_device(dev);
+	return 0;
 }
 
-static struct notifier_block __refdata cpuidle_hp_out_notifier = {
-	.notifier_call = exynos_cpuidle_hp_out_callback,
-	.priority = INT_MAX,	/* want to be called first */
-};
-
-
-static int exynos_cpuidle_hp_in_callback(struct notifier_block *nfb,
-					unsigned long action, void *hcpu)
+static int exynos_cpuidle_hp_in_callback(unsigned int cpu)
 {
-	unsigned int cpu = (unsigned long)hcpu;
 	struct cpuidle_device *dev = per_cpu(cpuidle_devices, cpu);
 
-	if (dev) {
-		switch (action) {
-		case CPU_ONLINE:
-			cpuidle_enable_device(dev);
-			break;
-		}
-	}
-	return NOTIFY_OK;
+	if (dev && !cpuhp_tasks_frozen)
+		cpuidle_enable_device(dev);
+	return 0;
 }
-
-static struct notifier_block __refdata cpuidle_hp_in_notifier = {
-	.notifier_call = exynos_cpuidle_hp_in_callback,
-	.priority = INT_MIN,	/* want to be called last */
-};
 
 static int __init cpuidle_hotcpu_init(void)
 {
-	register_hotcpu_notifier(&cpuidle_hp_out_notifier);
-	register_hotcpu_notifier(&cpuidle_hp_in_notifier);
+	int ret;
 
-	return 0;
+	ret = cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE_DYN, "cpuidle/exynos:online",
+					exynos_cpuidle_hp_in_callback,
+					exynos_cpuidle_hp_out_callback);
+	return ret < 0 ? ret : 0;
 }
 device_initcall(cpuidle_hotcpu_init);
 

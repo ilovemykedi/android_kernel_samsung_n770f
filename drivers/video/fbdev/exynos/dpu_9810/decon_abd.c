@@ -808,7 +808,7 @@ static void decon_abd_print_fto(struct seq_file *m, struct abd_fto *trace)
 #elif defined(CONFIG_SOC_EXYNOS9810)
 		abd_printf(m, "%d-%02d-%02d %02d:%02d:%02d / %lu.%06lu / winid: %d, %s\n",
 			tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec,
-			(unsigned long)tv.tv_sec, tv.tv_usec, log->winid, log->fence.name, sync_status_str(fence_get_status(log->fence.fence)));
+			(unsigned long)tv.tv_sec, tv.tv_usec, log->winid, log->fence.name, sync_status_str(dma_fence_get_status(log->fence.fence)));
 #else
 		abd_printf(m, "%d-%02d-%02d %02d:%02d:%02d / %lu.%06lu / winid: %d, %s\n",
 			tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec,

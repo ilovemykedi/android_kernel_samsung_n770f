@@ -909,7 +909,7 @@ static bool jd_submit_atom(struct kbase_context *const kctx,
 	jctx->job_nr++;
 
 #if KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE
-	katom->start_timestamp.tv64 = 0;
+	katom->start_timestamp = 0;
 #else
 	katom->start_timestamp = 0;
 #endif

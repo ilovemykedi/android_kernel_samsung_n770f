@@ -1756,9 +1756,6 @@ static struct packet_fanout *fanout_release(struct sock *sk)
 			list_del(&f->list);
 		else
 			f = NULL;
-
-		if (po->rollover)
-			kfree_rcu(po->rollover, rcu);
 	}
 	mutex_unlock(&fanout_mutex);
 

@@ -41,8 +41,6 @@ dma-buf.o: drivers/dma-buf/dma-buf.c include/linux/kconfig.h \
   include/uapi/linux/kernel.h include/uapi/linux/sysinfo.h \
   arch/arm64/include/asm/cache.h arch/arm64/include/asm/cachetype.h \
   arch/arm64/include/asm/cputype.h arch/arm64/include/asm/sysreg.h \
-  arch/arm64/include/asm/opcodes.h \
-  arch/arm64/include/../../arm/include/asm/opcodes.h \
   include/linux/spinlock.h include/linux/preempt.h \
   arch/arm64/include/generated/asm/preempt.h \
   include/asm-generic/preempt.h include/linux/thread_info.h \
@@ -135,7 +133,8 @@ dma-buf.o: drivers/dma-buf/dma-buf.c include/linux/kconfig.h \
   include/uapi/asm-generic/siginfo.h include/linux/pid.h \
   include/linux/topology.h include/linux/mmzone.h \
   include/linux/pageblock-flags.h include/linux/memory_hotplug.h \
-  include/linux/notifier.h include/linux/mutex.h include/linux/srcu.h \
+  include/linux/notifier.h include/linux/mutex.h \
+  include/linux/debug_locks.h include/linux/srcu.h \
   arch/arm64/include/asm/topology.h include/asm-generic/topology.h \
   include/linux/seccomp.h include/uapi/linux/seccomp.h \
   arch/arm64/include/asm/seccomp.h arch/arm64/include/asm/unistd.h \
@@ -162,8 +161,7 @@ dma-buf.o: drivers/dma-buf/dma-buf.c include/linux/kconfig.h \
   include/linux/semaphore.h include/linux/fcntl.h \
   include/uapi/linux/fcntl.h arch/arm64/include/uapi/asm/fcntl.h \
   include/uapi/asm-generic/fcntl.h include/uapi/linux/fiemap.h \
-  include/linux/migrate_mode.h include/linux/blk_types.h \
-  include/linux/bvec.h include/linux/delayed_call.h \
+  include/linux/migrate_mode.h include/linux/delayed_call.h \
   include/uapi/linux/fs.h include/uapi/linux/ioctl.h \
   arch/arm64/include/generated/asm/ioctl.h include/asm-generic/ioctl.h \
   include/uapi/asm-generic/ioctl.h include/linux/quota.h \
@@ -173,8 +171,7 @@ dma-buf.o: drivers/dma-buf/dma-buf.c include/linux/kconfig.h \
   include/uapi/linux/quota.h include/linux/nfs_fs_i.h \
   include/linux/slab.h include/linux/kmemleak.h include/linux/kasan.h \
   include/linux/dma-buf.h include/linux/file.h \
-  include/linux/scatterlist.h include/linux/mm.h \
-  include/linux/debug_locks.h include/linux/range.h \
+  include/linux/scatterlist.h include/linux/mm.h include/linux/range.h \
   include/linux/page_ext.h include/linux/stacktrace.h \
   include/linux/stackdepot.h include/linux/page_ref.h \
   include/linux/page-flags.h include/linux/tracepoint-defs.h \
@@ -184,8 +181,8 @@ dma-buf.o: drivers/dma-buf/dma-buf.c include/linux/kconfig.h \
   arch/arm64/include/asm/boot.h include/asm-generic/fixmap.h \
   include/asm-generic/pgtable.h include/linux/huge_mm.h \
   include/linux/vmstat.h include/linux/vm_event_item.h \
-  arch/arm64/include/asm/io.h \
-  arch/arm64/include/generated/asm/early_ioremap.h \
+  arch/arm64/include/asm/io.h include/linux/blk_types.h \
+  include/linux/bvec.h arch/arm64/include/generated/asm/early_ioremap.h \
   include/asm-generic/early_ioremap.h include/xen/xen.h \
   include/asm-generic/io.h include/asm-generic/pci_iomap.h \
   include/linux/vmalloc.h include/linux/dma-mapping.h \
@@ -198,9 +195,8 @@ dma-buf.o: drivers/dma-buf/dma-buf.c include/linux/kconfig.h \
   arch/arm64/include/asm/device.h include/linux/pm_wakeup.h \
   include/linux/dma-debug.h include/linux/dma-direction.h \
   include/linux/kmemcheck.h arch/arm64/include/asm/dma-mapping.h \
-  arch/arm64/include/asm/xen/hypervisor.h \
-  arch/arm64/include/../../arm/include/asm/xen/hypervisor.h \
-  include/linux/fence.h include/linux/anon_inodes.h \
+  arch/arm64/include/asm/xen/hypervisor.h include/xen/arm/hypervisor.h \
+  include/linux/dma-fence.h include/linux/anon_inodes.h \
   include/linux/debugfs.h include/linux/module.h include/linux/kmod.h \
   include/linux/elf.h arch/arm64/include/asm/elf.h \
   arch/arm64/include/generated/asm/user.h include/asm-generic/user.h \
@@ -208,7 +204,8 @@ dma-buf.o: drivers/dma-buf/dma-buf.c include/linux/kconfig.h \
   include/linux/moduleparam.h include/linux/extable.h \
   include/linux/rbtree_latch.h include/linux/cfi.h \
   arch/arm64/include/asm/module.h include/asm-generic/module.h \
-  include/linux/poll.h arch/arm64/include/asm/uaccess.h \
+  include/linux/poll.h include/linux/uaccess.h \
+  arch/arm64/include/asm/uaccess.h \
   arch/arm64/include/asm/kernel-pgtable.h \
   arch/arm64/include/asm/compiler.h include/uapi/linux/poll.h \
   arch/arm64/include/generated/asm/poll.h \

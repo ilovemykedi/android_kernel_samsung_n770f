@@ -36,10 +36,8 @@ bool blk_mq_dispatch_rq_list(struct blk_mq_hw_ctx *, struct list_head *);
 /*
  * CPU hotplug helpers
  */
-#ifndef CONFIG_EXYNOS_HOTPLUG_GOVERNOR
 void blk_mq_enable_hotplug(void);
 void blk_mq_disable_hotplug(void);
-#endif
 
 /*
  * CPU -> queue mappings
@@ -55,9 +53,7 @@ static inline struct blk_mq_hw_ctx *blk_mq_map_queue(struct request_queue *q,
 /*
  * sysfs helpers
  */
-#ifdef CONFIG_EXYNOS_HOTPLUG_GOVERNOR
 extern void blk_mq_sysfs_init(struct request_queue *q);
-#endif
 extern int blk_mq_sysfs_register(struct request_queue *q);
 extern void blk_mq_sysfs_unregister(struct request_queue *q);
 extern void blk_mq_hctx_kobj_init(struct blk_mq_hw_ctx *hctx);

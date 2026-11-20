@@ -559,10 +559,8 @@ static int nl80211_prepare_wdev_dump(struct sk_buff *skb,
 		*wdev = __cfg80211_wdev_from_attrs(
 					sock_net(skb->sk),
 					genl_family_attrbuf(&nl80211_fam));
-		if (IS_ERR(*wdev)) {
-			err = PTR_ERR(*wdev);
-			goto out_unlock;
-		}
+		if (IS_ERR(*wdev))
+			return PTR_ERR(*wdev);
 		*rdev = wiphy_to_rdev((*wdev)->wiphy);
 		/* 0 is the first index - add 1 to parse only once */
 		cb->args[0] = (*rdev)->wiphy_idx + 1;
@@ -11415,20 +11413,16 @@ static int nl80211_prepare_vendor_dump(struct sk_buff *skb,
 		return err;
 
 	if (!attrbuf[NL80211_ATTR_VENDOR_ID] ||
-	    !attrbuf[NL80211_ATTR_VENDOR_SUBCMD]) {
-		err = -EINVAL;
-		goto out_unlock;
-	}
+	    !attrbuf[NL80211_ATTR_VENDOR_SUBCMD])
+		return -EINVAL;
 
 	*wdev = __cfg80211_wdev_from_attrs(sock_net(skb->sk), attrbuf);
 	if (IS_ERR(*wdev))
 		*wdev = NULL;
 
 	*rdev = __cfg80211_rdev_from_attrs(sock_net(skb->sk), attrbuf);
-	if (IS_ERR(*rdev)) {
-		err = PTR_ERR(*rdev);
-		goto out_unlock;
-	}
+	if (IS_ERR(*rdev))
+		return PTR_ERR(*rdev);
 
 	vid = nla_get_u32(attrbuf[NL80211_ATTR_VENDOR_ID]);
 	subcmd = nla_get_u32(attrbuf[NL80211_ATTR_VENDOR_SUBCMD]);

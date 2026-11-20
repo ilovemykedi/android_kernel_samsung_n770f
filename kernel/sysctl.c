@@ -399,13 +399,6 @@ static struct ctl_table kern_table[] = {
 		.extra1		= &one,
 	},
 	{
-		.procname	= "sched_shares_window_ns",
-		.data		= &sysctl_sched_shares_window,
-		.maxlen		= sizeof(unsigned int),
-		.mode		= 0644,
-		.proc_handler	= proc_dointvec,
-	},
-	{
 		.procname	= "sched_switch_to_fair_load_ratio",
 		.data		= &sched_switch_to_fair_load_ratio,
 		.maxlen		= sizeof(unsigned int),

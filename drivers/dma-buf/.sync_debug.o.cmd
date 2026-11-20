@@ -1,4 +1,4 @@
-cmd_drivers/dma-buf/sync_debug.o := ./buildtools/samsung-toolchain/clang/host/linux-x86/clang-r349610-jopp/bin/clang -Wp,-MD,drivers/dma-buf/.sync_debug.o.d -nostdinc -isystem /root/kernel/n770f/buildtools/samsung-toolchain/clang/host/linux-x86/clang-r349610-jopp/lib64/clang/8.0.8/include -I./arch/arm64/include -I./arch/arm64/include/generated/uapi -I./arch/arm64/include/generated  -I./include -I./arch/arm64/include/uapi -I./include/uapi -I./include/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Qunused-arguments -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -fshort-wchar -Werror-implicit-function-declaration -Werror -std=gnu89 -Wno-sizeof-pointer-div --target=aarch64-linux-gnu --prefix=/root/kernel/n770f/buildtools/samsung-toolchain/gcc-cfp/gcc-cfp-jopp-only/aarch64-linux-android-4.9/bin/ --gcc-toolchain=/root/kernel/n770f/buildtools/samsung-toolchain/gcc-cfp/gcc-cfp-jopp-only/aarch64-linux-android-4.9 -no-integrated-as -Werror=unknown-warning-option -fno-PIE -mno-implicit-float -fno-asynchronous-unwind-tables -fno-pic -Wno-asm-operand-widths -fno-delete-null-pointer-checks -Wno-address-of-packed-member -Os -Wframe-larger-than=4096 -fstack-protector-strong -Wno-format-invalid-specifier -Wno-gnu -Wno-duplicate-decl-specifier -Wno-tautological-compare -mno-global-merge -Wno-unused-const-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-merge-all-constants -fno-stack-check -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Werror=incompatible-pointer-types -Wno-initializer-overrides -Wno-unused-value -Wno-format -Wno-sign-compare -Wno-format-zero-length -Wno-uninitialized    -DKBUILD_BASENAME='"sync_debug"'  -DKBUILD_MODNAME='"sync_debug"' -c -o drivers/dma-buf/.tmp_sync_debug.o drivers/dma-buf/sync_debug.c
+cmd_drivers/dma-buf/sync_debug.o := ./buildtools/samsung-toolchain/clang/host/linux-x86/clang-r349610-jopp/bin/clang -Wp,-MD,drivers/dma-buf/.sync_debug.o.d -nostdinc -isystem /root/kernel/n770f/buildtools/samsung-toolchain/clang/host/linux-x86/clang-r349610-jopp/lib64/clang/8.0.8/include -I./arch/arm64/include -I./arch/arm64/include/generated/uapi -I./arch/arm64/include/generated  -I./include -I./arch/arm64/include/uapi -I./include/uapi -I./include/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Qunused-arguments -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -fshort-wchar -Werror-implicit-function-declaration -Werror -std=gnu89 -Wno-sizeof-pointer-div --target=aarch64-linux-gnu --prefix=/root/kernel/n770f/buildtools/samsung-toolchain/gcc-cfp/gcc-cfp-jopp-only/aarch64-linux-android-4.9/bin/ --gcc-toolchain=/root/kernel/n770f/buildtools/samsung-toolchain/gcc-cfp/gcc-cfp-jopp-only/aarch64-linux-android-4.9 -no-integrated-as -Werror=unknown-warning-option -fno-PIE -mno-implicit-float -DCONFIG_BROKEN_GAS_INST=1 -fno-asynchronous-unwind-tables -fno-pic -Wno-asm-operand-widths -fno-delete-null-pointer-checks -Wno-address-of-packed-member -Os -Wframe-larger-than=4096 -fstack-protector-strong -Wno-format-invalid-specifier -Wno-gnu -Wno-duplicate-decl-specifier -Wno-tautological-compare -mno-global-merge -Wno-unused-const-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-merge-all-constants -fno-stack-check -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Werror=incompatible-pointer-types -Wno-initializer-overrides -Wno-unused-value -Wno-format -Wno-sign-compare -Wno-format-zero-length -Wno-uninitialized    -DKBUILD_BASENAME='"sync_debug"'  -DKBUILD_MODNAME='"sync_debug"' -c -o drivers/dma-buf/.tmp_sync_debug.o drivers/dma-buf/sync_debug.c
 
 source_drivers/dma-buf/sync_debug.o := drivers/dma-buf/sync_debug.c
 
@@ -67,6 +67,7 @@ deps_drivers/dma-buf/sync_debug.o := \
     $(wildcard include/config/have/underscore/symbol/prefix.h) \
     $(wildcard include/config/modules.h) \
     $(wildcard include/config/modversions.h) \
+    $(wildcard include/config/module/rel/crcs.h) \
     $(wildcard include/config/trim/unused/ksyms.h) \
     $(wildcard include/config/unused/symbols.h) \
   arch/arm64/include/asm/linkage.h \
@@ -126,6 +127,7 @@ deps_drivers/dma-buf/sync_debug.o := \
   include/linux/printk.h \
     $(wildcard include/config/sec/debug/auto/comment.h) \
     $(wildcard include/config/message/loglevel/default.h) \
+    $(wildcard include/config/console/loglevel/default.h) \
     $(wildcard include/config/early/printk.h) \
     $(wildcard include/config/printk/nmi.h) \
     $(wildcard include/config/printk.h) \
@@ -143,15 +145,11 @@ deps_drivers/dma-buf/sync_debug.o := \
   arch/arm64/include/asm/cachetype.h \
   arch/arm64/include/asm/cputype.h \
   arch/arm64/include/asm/sysreg.h \
+    $(wildcard include/config/broken/gas/inst.h) \
+    $(wildcard include/config/cpu/big/endian.h) \
     $(wildcard include/config/arm64/4k/pages.h) \
     $(wildcard include/config/arm64/16k/pages.h) \
     $(wildcard include/config/arm64/64k/pages.h) \
-  arch/arm64/include/asm/opcodes.h \
-    $(wildcard include/config/cpu/big/endian.h) \
-    $(wildcard include/config/cpu/endian/be8.h) \
-  arch/arm64/include/../../arm/include/asm/opcodes.h \
-    $(wildcard include/config/cpu/endian/be32.h) \
-    $(wildcard include/config/thumb2/kernel.h) \
   include/linux/spinlock.h \
     $(wildcard include/config/debug/spinlock.h) \
     $(wildcard include/config/generic/lockbreak.h) \
@@ -402,6 +400,7 @@ deps_drivers/dma-buf/sync_debug.o := \
     $(wildcard include/config/compat/brk.h) \
     $(wildcard include/config/cgroups.h) \
     $(wildcard include/config/cc/stackprotector.h) \
+    $(wildcard include/config/arch/has/scaled/cputime.h) \
     $(wildcard include/config/cpu/freq/times.h) \
     $(wildcard include/config/virt/cpu/accounting/gen.h) \
     $(wildcard include/config/sysvipc.h) \
@@ -411,6 +410,7 @@ deps_drivers/dma-buf/sync_debug.o := \
     $(wildcard include/config/ubsan.h) \
     $(wildcard include/config/task/xacct.h) \
     $(wildcard include/config/cpusets.h) \
+    $(wildcard include/config/intel/rdt/a.h) \
     $(wildcard include/config/futex.h) \
     $(wildcard include/config/numa/balancing.h) \
     $(wildcard include/config/arch/want/batched/unmap/tlb/flush.h) \
@@ -456,7 +456,6 @@ deps_drivers/dma-buf/sync_debug.o := \
     $(wildcard include/config/aio.h) \
     $(wildcard include/config/mmu/notifier.h) \
     $(wildcard include/config/compaction.h) \
-    $(wildcard include/config/x86/intel/mpx.h) \
     $(wildcard include/config/hugetlb/page.h) \
   include/linux/auxvec.h \
   include/uapi/linux/auxvec.h \
@@ -594,6 +593,8 @@ deps_drivers/dma-buf/sync_debug.o := \
   include/linux/notifier.h \
   include/linux/mutex.h \
     $(wildcard include/config/mutex/spin/on/owner.h) \
+  include/linux/debug_locks.h \
+    $(wildcard include/config/debug/locking/api/selftests.h) \
   include/linux/srcu.h \
   arch/arm64/include/asm/topology.h \
   include/asm-generic/topology.h \
@@ -679,10 +680,6 @@ deps_drivers/dma-buf/sync_debug.o := \
   include/uapi/asm-generic/fcntl.h \
   include/uapi/linux/fiemap.h \
   include/linux/migrate_mode.h \
-  include/linux/blk_types.h \
-    $(wildcard include/config/blk/dev/integrity.h) \
-  include/linux/bvec.h \
-    $(wildcard include/config/crypto/diskcipher.h) \
   include/linux/delayed_call.h \
   include/uapi/linux/fs.h \
     $(wildcard include/config/epm.h) \
@@ -703,10 +700,10 @@ deps_drivers/dma-buf/sync_debug.o := \
   include/linux/seq_file.h \
   drivers/dma-buf/sync_debug.h \
     $(wildcard include/config/sw/sync.h) \
-  include/linux/fence.h \
-    $(wildcard include/config/fence/trace.h) \
+  include/linux/dma-fence.h \
+    $(wildcard include/config/dma/fence/trace.h) \
   include/linux/sync_file.h \
-  include/linux/fence-array.h \
+  include/linux/dma-fence-array.h \
   include/uapi/linux/sync_file.h \
 
 drivers/dma-buf/sync_debug.o: $(deps_drivers/dma-buf/sync_debug.o)

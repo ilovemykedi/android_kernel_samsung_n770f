@@ -2262,43 +2262,6 @@ static void mark_map_regs(struct bpf_verifier_state *state, u32 regno,
 	}
 }
 
-static void mark_map_reg(struct bpf_reg_state *regs, u32 regno, u32 id,
-			 enum bpf_reg_type type)
-{
-	struct bpf_reg_state *reg = &regs[regno];
-
-	if (reg->type == PTR_TO_MAP_VALUE_OR_NULL && reg->id == id) {
-		reg->type = type;
-		/* We don't need id from this point onwards anymore, thus we
-		 * should better reset it, so that state pruning has chances
-		 * to take effect.
-		 */
-		reg->id = 0;
-		if (type == UNKNOWN_VALUE)
-			__mark_reg_unknown_value(regs, regno);
-	}
-}
-
-/* The logic is similar to find_good_pkt_pointers(), both could eventually
- * be folded together at some point.
- */
-static void mark_map_regs(struct bpf_verifier_state *state, u32 regno,
-			  enum bpf_reg_type type)
-{
-	struct bpf_reg_state *regs = state->regs;
-	u32 id = regs[regno].id;
-	int i;
-
-	for (i = 0; i < MAX_BPF_REG; i++)
-		mark_map_reg(regs, i, id, type);
-
-	for (i = 0; i < MAX_BPF_STACK; i += BPF_REG_SIZE) {
-		if (state->stack_slot_type[i] != STACK_SPILL)
-			continue;
-		mark_map_reg(state->spilled_regs, i / BPF_REG_SIZE, id, type);
-	}
-}
-
 static int check_cond_jmp_op(struct bpf_verifier_env *env,
 			     struct bpf_insn *insn, int *insn_idx)
 {
@@ -3561,6 +3524,8 @@ static int fixup_bpf_calls(struct bpf_verifier_env *env)
 			prog->dst_needed = 1;
 		if (insn->imm == BPF_FUNC_get_prandom_u32)
 			bpf_user_rnd_init_once();
+		if (insn->imm == BPF_FUNC_xdp_adjust_head)
+			prog->xdp_adjust_head = 1;
 		if (insn->imm == BPF_FUNC_tail_call) {
 			/* mark bpf_tail_call as different opcode to avoid
 			 * conditional branch in the interpeter for every normal

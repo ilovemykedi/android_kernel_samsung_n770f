@@ -206,14 +206,14 @@ out:
 
 static void
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE)
-kbase_dma_fence_cb(struct fence *fence, struct fence_cb *cb)
+kbase_dma_fence_cb(struct dma_fence *fence, struct dma_fence_cb *cb)
 #else
 kbase_dma_fence_cb(struct dma_fence *fence, struct dma_fence_cb *cb)
 #endif
 {
 	struct kbase_fence_cb *kcb = container_of(cb,
 				struct kbase_fence_cb,
-				fence_cb);
+				dma_fence_cb);
 	struct kbase_jd_atom *katom = kcb->katom;
 
 	/* If the atom is zapped dep_count will be forced to a negative number
@@ -238,8 +238,8 @@ kbase_dma_fence_add_reservation_callback(struct kbase_jd_atom *katom,
 #endif
 {
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE)
-	struct fence *excl_fence = NULL;
-	struct fence **shared_fences = NULL;
+	struct dma_fence *excl_fence = NULL;
+	struct dma_fence **shared_fences = NULL;
 #else
 	struct dma_fence *excl_fence = NULL;
 	struct dma_fence **shared_fences = NULL;
@@ -338,7 +338,7 @@ int kbase_dma_fence_wait(struct kbase_jd_atom *katom,
 {
 	int err, i;
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE)
-	struct fence *fence;
+	struct dma_fence *fence;
 #else
 	struct dma_fence *fence;
 #endif

@@ -35,24 +35,24 @@
 #include "mali_kbase.h"
 
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE)
-extern const struct fence_ops kbase_fence_ops;
+extern const struct dma_fence_ops kbase_fence_ops;
 #else
 extern const struct dma_fence_ops kbase_fence_ops;
 #endif
 
 /**
  * struct kbase_fence_cb - Mali dma-fence callback data struct
- * @fence_cb: Callback function
+ * @dma_fence_cb: Callback function
  * @katom:    Pointer to katom that is waiting on this callback
  * @fence:    Pointer to the fence object on which this callback is waiting
  * @node:     List head for linking this callback to the katom
  */
 struct kbase_fence_cb {
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE)
-	struct fence_cb fence_cb;
-	struct fence *fence;
+	struct dma_fence_cb dma_fence_cb;
+	struct dma_fence *fence;
 #else
-	struct dma_fence_cb fence_cb;
+	struct dma_fence_cb dma_fence_cb;
 	struct dma_fence *fence;
 #endif
 	struct kbase_jd_atom *katom;
@@ -66,7 +66,7 @@ struct kbase_fence_cb {
  * Return: A new fence object on success, NULL on failure.
  */
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE)
-struct fence *kbase_fence_out_new(struct kbase_jd_atom *katom);
+struct dma_fence *kbase_fence_out_new(struct kbase_jd_atom *katom);
 #else
 struct dma_fence *kbase_fence_out_new(struct kbase_jd_atom *katom);
 #endif
@@ -143,7 +143,7 @@ static inline int kbase_fence_out_signal(struct kbase_jd_atom *katom,
 	if (status) {
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE && \
 	  KERNEL_VERSION(4, 9, 68) <= LINUX_VERSION_CODE)
-		fence_set_error(katom->dma_fence.fence, status);
+		dma_fence_set_error(katom->dma_fence.fence, status);
 #elif (KERNEL_VERSION(4, 11, 0) <= LINUX_VERSION_CODE)
 		dma_fence_set_error(katom->dma_fence.fence, status);
 #else
@@ -170,8 +170,8 @@ static inline int kbase_fence_out_signal(struct kbase_jd_atom *katom,
  */
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE)
 int kbase_fence_add_callback(struct kbase_jd_atom *katom,
-			     struct fence *fence,
-			     fence_func_t callback);
+			     struct dma_fence *fence,
+			     dma_fence_func_t callback);
 #else
 int kbase_fence_add_callback(struct kbase_jd_atom *katom,
 			     struct dma_fence *fence,

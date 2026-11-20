@@ -1341,15 +1341,13 @@ static int ecd_cpuhp_setup_state(const char *name,
 	return cpuhp_setup_state(CPUHP_AP_ECD_STARTING, name, startup, teardown);
 }
 
+/*
+ * The CPU notifier chain is gone since v4.10; firmware must use the
+ * ecd_cpuhp_setup_state() hook instead.
+ */
 static int ecd_register_hotcpu_notifier(void *nbp, notifier_fn_t func)
 {
-	struct notifier_block *nb = (struct notifier_block *)nbp;
-
-	nb = devm_kzalloc(&interface->pdev->dev, sizeof(struct notifier_block), GFP_KERNEL);
-	if (!nb)
-		return -ENOMEM;
-	nb->notifier_call = func;
-	return register_hotcpu_notifier((struct notifier_block *)nb);
+	return -EOPNOTSUPP;
 }
 
 static int ecd_register_lowpm_notifier(void *nbp, notifier_fn_t func)
