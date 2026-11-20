@@ -48,13 +48,13 @@ struct perf_guest_info_callbacks {
 #include <linux/cpu.h>
 #include <linux/irq_work.h>
 #include <linux/static_key.h>
+#include <linux/security.h>
 #include <linux/jump_label_ratelimit.h>
 #include <linux/atomic.h>
 #include <linux/sysfs.h>
 #include <linux/perf_regs.h>
 #include <linux/workqueue.h>
 #include <linux/cgroup.h>
-#include <linux/security.h>
 #include <asm/local.h>
 
 struct perf_callchain_entry {
@@ -476,7 +476,7 @@ struct pmu {
  */
 struct perf_addr_filter {
 	struct list_head	entry;
-	struct inode		*inode;
+	struct path		path;
 	unsigned long		offset;
 	unsigned long		size;
 	unsigned int		range	: 1,
@@ -699,6 +699,7 @@ struct perf_event {
 #ifdef CONFIG_BPF_SYSCALL
 	perf_overflow_handler_t		orig_overflow_handler;
 	struct bpf_prog			*prog;
+	u64				bpf_cookie;
 #endif
 
 #ifdef CONFIG_EVENT_TRACING
@@ -818,6 +819,7 @@ struct perf_output_handle {
 struct bpf_perf_event_data_kern {
 	struct pt_regs *regs;
 	struct perf_sample_data *data;
+	struct perf_event *event;
 };
 
 #ifdef CONFIG_CGROUP_PERF
@@ -875,6 +877,7 @@ extern void perf_event_exit_task(struct task_struct *child);
 extern void perf_event_free_task(struct task_struct *task);
 extern void perf_event_delayed_put(struct task_struct *task);
 extern struct file *perf_event_get(unsigned int fd);
+extern const struct perf_event *perf_get_event(struct file *file);
 extern const struct perf_event_attr *perf_event_attrs(struct perf_event *event);
 extern void perf_event_print_debug(void);
 extern void perf_pmu_disable(struct pmu *pmu);
@@ -894,7 +897,8 @@ perf_event_create_kernel_counter(struct perf_event_attr *attr,
 				void *context);
 extern void perf_pmu_migrate_context(struct pmu *pmu,
 				int src_cpu, int dst_cpu);
-extern u64 perf_event_read_local(struct perf_event *event);
+int perf_event_read_local(struct perf_event *event, u64 *value,
+			  u64 *enabled, u64 *running);
 extern u64 perf_event_read_value(struct perf_event *event,
 				 u64 *enabled, u64 *running);
 
@@ -1131,6 +1135,8 @@ get_perf_callchain(struct pt_regs *regs, u32 init_nr, bool kernel, bool user,
 		   u32 max_stack, bool crosstask, bool add_mark);
 extern int get_callchain_buffers(int max_stack);
 extern void put_callchain_buffers(void);
+extern struct perf_callchain_entry *get_callchain_entry(int *rctx);
+extern void put_callchain_entry(int rctx);
 
 extern int sysctl_perf_event_max_stack;
 extern int sysctl_perf_event_max_contexts_per_stack;
@@ -1177,6 +1183,26 @@ extern int perf_cpu_time_max_percent_handler(struct ctl_table *table, int write,
 int perf_event_max_stack_handler(struct ctl_table *table, int write,
 				 void __user *buffer, size_t *lenp, loff_t *ppos);
 
+static inline bool perf_paranoid_any(void)
+{
+	return sysctl_perf_event_paranoid > 2;
+}
+
+static inline bool perf_paranoid_tracepoint_raw(void)
+{
+	return sysctl_perf_event_paranoid > -1;
+}
+
+static inline bool perf_paranoid_cpu(void)
+{
+	return sysctl_perf_event_paranoid > 0;
+}
+
+static inline bool perf_paranoid_kernel(void)
+{
+	return sysctl_perf_event_paranoid > 1;
+}
+
 /* Access to perf_event_open(2) syscall. */
 #define PERF_SECURITY_OPEN		0
 
@@ -1184,11 +1210,6 @@ int perf_event_max_stack_handler(struct ctl_table *table, int write,
 #define PERF_SECURITY_CPU		1
 #define PERF_SECURITY_KERNEL		2
 #define PERF_SECURITY_TRACEPOINT	3
-
-static inline bool perf_paranoid_any(void)
-{
-	return sysctl_perf_event_paranoid > 2;
-}
 
 static inline int perf_is_paranoid(void)
 {
@@ -1321,11 +1342,19 @@ static inline void perf_event_exit_task(struct task_struct *child)	{ }
 static inline void perf_event_free_task(struct task_struct *task)	{ }
 static inline void perf_event_delayed_put(struct task_struct *task)	{ }
 static inline struct file *perf_event_get(unsigned int fd)	{ return ERR_PTR(-EINVAL); }
+static inline const struct perf_event *perf_get_event(struct file *file)
+{
+	return ERR_PTR(-EINVAL);
+}
 static inline const struct perf_event_attr *perf_event_attrs(struct perf_event *event)
 {
 	return ERR_PTR(-EINVAL);
 }
-static inline u64 perf_event_read_local(struct perf_event *event)	{ return -EINVAL; }
+static inline int perf_event_read_local(struct perf_event *event, u64 *value,
+					u64 *enabled, u64 *running)
+{
+	return -EINVAL;
+}
 static inline void perf_event_print_debug(void)				{ }
 static inline int perf_event_task_disable(void)				{ return -EINVAL; }
 static inline int perf_event_task_enable(void)				{ return -EINVAL; }

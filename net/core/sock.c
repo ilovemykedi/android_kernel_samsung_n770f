@@ -135,6 +135,7 @@
 
 #include <linux/filter.h>
 #include <net/sock_reuseport.h>
+#include <net/bpf_sk_storage.h>
 
 #include <trace/events/sock.h>
 
@@ -713,14 +714,6 @@ out:
 }
 
 // SEC_PRODUCT_FEATURE_KNOX_SUPPORT_NPA }
-static inline void sock_valbool_flag(struct sock *sk, int bit, int valbool)
-{
-	if (valbool)
-		sock_set_flag(sk, bit);
-	else
-		sock_reset_flag(sk, bit);
-}
-
 bool sk_mc_loop(struct sock *sk)
 {
 	if (dev_recursion_level())
@@ -1563,6 +1556,7 @@ struct sock *sk_alloc(struct net *net, int family, gfp_t priority,
 		sk->sk_prot = sk->sk_prot_creator = prot;
 		sock_lock_init(sk);
 		sk->sk_net_refcnt = kern ? 0 : 1;
+		sk->sk_kern_sock = kern;
 		if (likely(sk->sk_net_refcnt))
 			get_net(net);
 		sock_net_set(sk, net);
@@ -1599,6 +1593,10 @@ static void __sk_destruct(struct rcu_head *head)
 		reuseport_detach_sock(sk);
 
 	sock_disable_timestamp(sk, SK_FLAGS_TIMESTAMP);
+
+#ifdef CONFIG_BPF_SYSCALL
+	bpf_sk_storage_free(sk);
+#endif
 
 	if (atomic_read(&sk->sk_omem_alloc))
 		pr_debug("%s: optmem leakage (%d bytes) detected\n",
@@ -1723,6 +1721,17 @@ struct sock *sk_clone_lock(const struct sock *sk, const gfp_t priority)
 			goto out;
 		}
 		RCU_INIT_POINTER(newsk->sk_reuseport_cb, NULL);
+
+		if (bpf_sk_storage_clone(sk, newsk)) {
+#ifdef CONFIG_BPF_SYSCALL
+			bpf_sk_storage_free(newsk);
+#endif
+			newsk->sk_destruct = NULL;
+			bh_unlock_sock(newsk);
+			sk_free(newsk);
+			newsk = NULL;
+			goto out;
+		}
 
 		newsk->sk_err	   = 0;
 		newsk->sk_err_soft = 0;

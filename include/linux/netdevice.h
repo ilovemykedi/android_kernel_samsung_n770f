@@ -46,6 +46,7 @@
 #include <net/dcbnl.h>
 #endif
 #include <net/netprio_cgroup.h>
+#include <net/xdp.h>
 
 #include <linux/netdev_features.h>
 #include <linux/neighbour.h>
@@ -697,6 +698,7 @@ struct netdev_rx_queue {
 #endif
 	struct kobject			kobj;
 	struct net_device		*dev;
+	struct xdp_rxq_info		xdp_rxq;
 } ____cacheline_aligned_in_smp;
 
 /*
@@ -833,6 +835,59 @@ struct netdev_xdp {
 		bool prog_attached;
 	};
 };
+
+/* Backported (5.15-level BPF): BPF/XDP device commands. Drivers in this
+ * tree still implement the older ndo_xdp; nothing implements ndo_bpf yet.
+ */
+enum bpf_netdev_command {
+	XDP_SETUP_PROG_BPF,
+	XDP_SETUP_PROG_HW,
+	XDP_QUERY_PROG_BPF,
+	XDP_QUERY_PROG_HW,
+	BPF_OFFLOAD_VERIFIER_PREP,
+	BPF_OFFLOAD_TRANSLATE,
+	BPF_OFFLOAD_DESTROY,
+	BPF_OFFLOAD_MAP_ALLOC,
+	BPF_OFFLOAD_MAP_FREE,
+	XDP_SETUP_XSK_POOL,
+};
+
+struct bpf_prog_offload_ops;
+struct bpf_offloaded_map;
+struct bpf_xdp_link;
+
+enum bpf_xdp_mode {
+	XDP_MODE_SKB = 0,
+	XDP_MODE_DRV = 1,
+	XDP_MODE_HW = 2,
+	__MAX_XDP_MODE
+};
+
+struct netdev_bpf {
+	enum bpf_netdev_command command;
+	union {
+		struct {
+			u32 flags;
+			struct bpf_prog *prog;
+		};
+		struct {
+			u8 prog_attached;
+			u32 prog_id;
+		};
+		struct {
+			struct bpf_prog *prog;
+			const struct bpf_prog_offload_ops *ops;
+		} verifier;
+		struct {
+			struct bpf_prog *prog;
+		} offload;
+		struct {
+			struct bpf_offloaded_map *offmap;
+		};
+	};
+};
+
+typedef int (*bpf_op_t)(struct net_device *dev, struct netdev_bpf *bpf);
 
 /*
  * This structure defines the management hooks for network devices.
@@ -1325,6 +1380,12 @@ struct net_device_ops {
 						       int needed_headroom);
 	int			(*ndo_xdp)(struct net_device *dev,
 					   struct netdev_xdp *xdp);
+	int			(*ndo_bpf)(struct net_device *dev,
+					   struct netdev_bpf *bpf);
+	int			(*ndo_xdp_xmit)(struct net_device *dev,
+						struct xdp_buff *xdp);
+	void			(*ndo_xdp_flush)(struct net_device *dev);
+	struct net_device *	(*ndo_get_peer_dev)(struct net_device *dev);
 };
 
 /**
@@ -3283,6 +3344,19 @@ int dev_get_phys_port_name(struct net_device *dev,
 			   char *name, size_t len);
 int dev_change_proto_down(struct net_device *dev, bool proto_down);
 int dev_change_xdp_fd(struct net_device *dev, int fd, u32 flags);
+union bpf_attr;
+int bpf_xdp_link_attach(const union bpf_attr *attr, struct bpf_prog *prog);
+u32 dev_xdp_prog_id(struct net_device *dev, enum bpf_xdp_mode mode);
+int dev_forward_skb_nomtu(struct net_device *dev, struct sk_buff *skb);
+
+/* 4.9: VRF slave index lookups for BPF socket lookup helpers */
+static inline int dev_sdif(const struct net_device *dev)
+{
+	return 0;
+}
+u32 bpf_prog_run_generic_xdp(struct sk_buff *skb, struct xdp_buff *xdp,
+			     struct bpf_prog *xdp_prog);
+void generic_xdp_tx(struct sk_buff *skb, struct bpf_prog *xdp_prog);
 struct sk_buff *validate_xmit_skb_list(struct sk_buff *skb, struct net_device *dev);
 struct sk_buff *dev_hard_start_xmit(struct sk_buff *skb, struct net_device *dev,
 				    struct netdev_queue *txq, int *ret);

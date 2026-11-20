@@ -12,6 +12,8 @@ struct sock_reuseport {
 	u16			max_socks;	/* length of socks */
 	u16			num_socks;	/* elements in socks */
 	struct bpf_prog __rcu	*prog;		/* optional BPF sock selector */
+	unsigned int		reuseport_id;	/* backported for BPF; always 0 */
+	unsigned int		bind_inany:1;
 	struct sock		*socks[0];	/* array of sock pointers */
 };
 

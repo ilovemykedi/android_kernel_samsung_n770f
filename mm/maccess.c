@@ -105,3 +105,87 @@ long strncpy_from_unsafe(char *dst, const void *unsafe_addr, long count)
 
 	return ret ? -EFAULT : src - unsafe_addr;
 }
+
+/*
+ * Helpers used by the backported (5.15-level) BPF subsystem. On arm64 there
+ * is no overlap between user and kernel address ranges, so the "_strict"
+ * kernel variants are the plain kernel accessors.
+ */
+long probe_kernel_read_strict(void *dst, const void *src, size_t size)
+{
+	return probe_kernel_read(dst, src, size);
+}
+
+long strncpy_from_unsafe_strict(char *dst, const void *unsafe_addr, long count)
+{
+	return strncpy_from_unsafe(dst, unsafe_addr, count);
+}
+
+/**
+ * probe_user_read(): safely attempt to read from a user-space location
+ */
+long probe_user_read(void *dst, const void __user *src, size_t size)
+{
+	long ret = -EFAULT;
+	mm_segment_t old_fs = get_fs();
+
+	set_fs(USER_DS);
+	if (access_ok(VERIFY_READ, src, size)) {
+		pagefault_disable();
+		ret = __copy_from_user_inatomic(dst, src, size);
+		pagefault_enable();
+	}
+	set_fs(old_fs);
+
+	return ret ? -EFAULT : 0;
+}
+EXPORT_SYMBOL_GPL(probe_user_read);
+
+/**
+ * probe_user_write(): safely attempt to write to a user-space location
+ */
+long probe_user_write(void __user *dst, const void *src, size_t size)
+{
+	long ret = -EFAULT;
+	mm_segment_t old_fs = get_fs();
+
+	set_fs(USER_DS);
+	if (access_ok(VERIFY_WRITE, dst, size)) {
+		pagefault_disable();
+		ret = __copy_to_user_inatomic(dst, src, size);
+		pagefault_enable();
+	}
+	set_fs(old_fs);
+
+	return ret ? -EFAULT : 0;
+}
+EXPORT_SYMBOL_GPL(probe_user_write);
+
+/**
+ * strncpy_from_user_nofault: copy a NUL terminated string from user space
+ * without faulting. Returns the length including the NUL, or -EFAULT.
+ */
+long strncpy_from_user_nofault(char *dst, const void __user *unsafe_addr,
+			       long count)
+{
+	mm_segment_t old_fs = get_fs();
+	long ret;
+
+	if (unlikely(count <= 0))
+		return 0;
+
+	set_fs(USER_DS);
+	pagefault_disable();
+	ret = strncpy_from_user(dst, unsafe_addr, count);
+	pagefault_enable();
+	set_fs(old_fs);
+
+	if (ret >= count) {
+		ret = count;
+		dst[ret - 1] = '\0';
+	} else if (ret > 0) {
+		ret++;
+	}
+
+	return ret;
+}

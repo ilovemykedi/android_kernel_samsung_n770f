@@ -673,6 +673,7 @@ KBUILD_CFLAGS	+= $(call cc-disable-warning,frame-address,)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, format-truncation)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, format-overflow)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, int-in-bool-context)
+KBUILD_CFLAGS	+= $(call cc-disable-warning, sizeof-array-argument)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, address-of-packed-member)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, attribute-alias)
 
@@ -793,6 +794,18 @@ KBUILD_CPPFLAGS += $(call cc-option,-Qunused-arguments,)
 KBUILD_CFLAGS += $(call cc-disable-warning, format-invalid-specifier)
 KBUILD_CFLAGS += $(call cc-disable-warning, gnu)
 KBUILD_CFLAGS += $(call cc-disable-warning, duplicate-decl-specifier)
+
+# Clang may emit a warning when a const variable, such as the dummy variables
+# in typecheck(), or const member of an aggregate type are not initialized,
+# which can result in unexpected behavior. However, in many audited cases of
+# the "field" variant of the warning, this is intentional because the field is
+# never used within a particular call path, the field is within a union with
+# other non-const members, or the containing object is not const so the field
+# can be modified via memcpy() / memset(). While the variable warning also gets
+# disabled with this same switch, there should not be too much coverage lost
+# because -Wuninitialized will still flag when an uninitialized const variable
+# is used.
+KBUILD_CFLAGS += $(call cc-disable-warning, default-const-init-unsafe)
 # Quiet clang warning: comparison of unsigned expression < 0 is always false
 KBUILD_CFLAGS += $(call cc-disable-warning, tautological-compare)
 # CLANG uses a _MergedGlobals as optimization, but this breaks modpost, as the
@@ -899,6 +912,7 @@ KBUILD_CFLAGS   += $(call cc-option,-Werror=implicit-int)
 
 # require functions to have arguments in prototypes, not empty 'int foo()'
 KBUILD_CFLAGS   += $(call cc-option,-Werror=strict-prototypes)
+KBUILD_CFLAGS   += $(call cc-disable-warning, strict-prototypes)
 
 # Prohibit date/time macros, which would make the build non-deterministic
 KBUILD_CFLAGS   += $(call cc-option,-Werror=date-time)
@@ -1164,7 +1178,7 @@ prepare0: archprepare gcc-plugins
 	$(Q)$(MAKE) $(build)=.
 
 # All the preparing..
-prepare: prepare0 prepare-objtool
+prepare: prepare0 prepare-objtool prepare-resolve_btfids
 
 ifdef CONFIG_STACK_VALIDATION
   has_libelf := $(call try-run,\
@@ -1178,8 +1192,20 @@ ifdef CONFIG_STACK_VALIDATION
   endif
 endif
 
-PHONY += prepare-objtool
+PHONY += prepare-objtool prepare-resolve_btfids
 prepare-objtool: $(objtool_target)
+
+ifdef CONFIG_DEBUG_INFO_BTF
+resolve_btfids_target := $(RESOLVE_BTFIDS)
+endif
+
+prepare-resolve_btfids: $(resolve_btfids_target)
+
+$(RESOLVE_BTFIDS): FORCE
+	$(Q)$(MAKE) -C $(srctree)/tools/bpf/resolve_btfids \
+		OUTPUT=$(dir $(RESOLVE_BTFIDS)) \
+		HOSTCC="$(HOSTCC)" HOSTCFLAGS="$(HOSTCFLAGS)" \
+		HOSTLDFLAGS="$(HOSTLDFLAGS)"
 
 # Check for CONFIG flags that require compiler support. Abort the build
 # after .config has been processed, but before the kernel build starts.

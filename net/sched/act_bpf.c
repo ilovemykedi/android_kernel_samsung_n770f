@@ -16,6 +16,7 @@
 #include <linux/bpf.h>
 
 #include <net/netlink.h>
+#include <net/sock.h>
 #include <net/pkt_sched.h>
 
 #include <linux/tc_act/tc_bpf.h>
@@ -32,7 +33,7 @@ struct tcf_bpf_cfg {
 	bool is_ebpf;
 };
 
-static unsigned int bpf_net_id;
+static int bpf_net_id;
 static struct tc_action_ops act_bpf_ops;
 
 static int tcf_bpf(struct sk_buff *skb, const struct tc_action *act,
@@ -50,13 +51,15 @@ static int tcf_bpf(struct sk_buff *skb, const struct tc_action *act,
 	filter = rcu_dereference(prog->filter);
 	if (at_ingress) {
 		__skb_push(skb, skb->mac_len);
-		bpf_compute_data_end(skb);
-		filter_res = BPF_PROG_RUN(filter, skb);
+		bpf_compute_data_pointers(skb);
+		filter_res = bpf_prog_run(filter, skb);
 		__skb_pull(skb, skb->mac_len);
 	} else {
-		bpf_compute_data_end(skb);
-		filter_res = BPF_PROG_RUN(filter, skb);
+		bpf_compute_data_pointers(skb);
+		filter_res = bpf_prog_run(filter, skb);
 	}
+	if (skb_sk_is_prefetched(skb) && filter_res != TC_ACT_OK)
+		skb_orphan(skb);
 	rcu_read_unlock();
 
 	/* A BPF program may overwrite the default action opcode.
@@ -121,6 +124,9 @@ static int tcf_bpf_dump_ebpf_info(const struct tcf_bpf *prog,
 
 	if (prog->bpf_name &&
 	    nla_put_string(skb, TCA_ACT_BPF_NAME, prog->bpf_name))
+		return -EMSGSIZE;
+
+	if (nla_put_u32(skb, TCA_ACT_BPF_ID, prog->filter->aux->id))
 		return -EMSGSIZE;
 
 	nla = nla_reserve(skb, TCA_ACT_BPF_TAG, sizeof(prog->filter->tag));
@@ -230,7 +236,9 @@ static int tcf_bpf_init_from_efd(struct nlattr **tb, struct tcf_bpf_cfg *cfg)
 		return PTR_ERR(fp);
 
 	if (tb[TCA_ACT_BPF_NAME]) {
-		name = nla_memdup(tb[TCA_ACT_BPF_NAME], GFP_KERNEL);
+		name = kmemdup(nla_data(tb[TCA_ACT_BPF_NAME]),
+			       nla_len(tb[TCA_ACT_BPF_NAME]),
+			       GFP_KERNEL);
 		if (!name) {
 			bpf_prog_put(fp);
 			return -ENOMEM;

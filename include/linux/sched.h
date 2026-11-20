@@ -58,7 +58,6 @@ struct sched_param {
 #include <linux/uidgid.h>
 #include <linux/gfp.h>
 #include <linux/magic.h>
-#include <linux/cgroup-defs.h>
 #include <linux/sec_debug_types.h>
 #include <asm/processor.h>
 
@@ -134,6 +133,8 @@ struct perf_event_context;
 struct blk_plug;
 struct filename;
 struct nameidata;
+struct bpf_run_ctx;
+struct bpf_local_storage;
 
 #define VMACACHE_BITS 2
 #define VMACACHE_SIZE (1U << VMACACHE_BITS)
@@ -2224,6 +2225,12 @@ struct task_struct {
 #ifdef CONFIG_SEC_DEBUG_DTASK
 	struct sec_debug_wait		ssdbg_wait;
 #endif
+#ifdef CONFIG_BPF_SYSCALL
+	/* Used by BPF task local storage. */
+	struct bpf_local_storage __rcu *bpf_storage;
+	/* Ambient context for the currently running BPF program. */
+	struct bpf_run_ctx *bpf_ctx;
+#endif
 /* CPU-specific state of this task */
 #ifdef CONFIG_KSU_SUSFS
 	u64 susfs_task_state;
@@ -3413,11 +3420,7 @@ static inline void unlock_task_sighand(struct task_struct *tsk,
  * subsystems needing threadgroup stability can hook into for
  * synchronization.
  */
-static inline void threadgroup_change_begin(struct task_struct *tsk)
-{
-	might_sleep();
-	cgroup_threadgroup_change_begin(tsk);
-}
+extern void threadgroup_change_begin(struct task_struct *tsk);
 
 /**
  * threadgroup_change_end - mark the end of changes to a threadgroup
@@ -3425,10 +3428,7 @@ static inline void threadgroup_change_begin(struct task_struct *tsk)
  *
  * See threadgroup_change_begin().
  */
-static inline void threadgroup_change_end(struct task_struct *tsk)
-{
-	cgroup_threadgroup_change_end(tsk);
-}
+extern void threadgroup_change_end(struct task_struct *tsk);
 
 #ifdef CONFIG_THREAD_INFO_IN_TASK
 

@@ -39,6 +39,7 @@
 #include <linux/proc_ns.h>
 #include <linux/proc_fs.h>
 #include <linux/anon_inodes.h>
+#include <linux/file.h>
 
 #define pid_hashfn(nr, ns)	\
 	hash_long((unsigned long)nr + (unsigned long)ns, pidhash_shift)
@@ -679,4 +680,28 @@ void __init pidmap_init(void)
 
 	init_pid_ns.pid_cachep = KMEM_CACHE(pid,
 			SLAB_HWCACHE_ALIGN | SLAB_PANIC | SLAB_ACCOUNT);
+}
+
+/* Backported for BPF task storage: resolve a pidfd (or /proc/<pid> fd) */
+struct pid *pidfd_get_pid(unsigned int fd, unsigned int *flags)
+{
+	struct fd f;
+	struct pid *pid;
+
+	f = fdget(fd);
+	if (!f.file)
+		return ERR_PTR(-EBADF);
+
+	if (f.file->f_op == &pidfd_fops)
+		pid = f.file->private_data;
+	else
+		pid = tgid_pidfd_to_pid(f.file);
+
+	if (!IS_ERR(pid)) {
+		get_pid(pid);
+		*flags = f.file->f_flags;
+	}
+
+	fdput(f);
+	return pid;
 }

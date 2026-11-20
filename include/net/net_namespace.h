@@ -27,6 +27,7 @@
 #include <net/netns/nftables.h>
 #include <net/netns/xfrm.h>
 #include <net/netns/mpls.h>
+#include <net/netns/bpf.h>
 #include <linux/ns_common.h>
 #include <linux/idr.h>
 #include <linux/skbuff.h>
@@ -55,6 +56,7 @@ struct net {
 
 	u32			hash_mix;
 	atomic64_t		cookie_gen;
+	atomic64_t		net_cookie; /* written once */
 
 	struct list_head	list;		/* list of network namespaces */
 	struct list_head	cleanup_list;	/* namespaces on death row */
@@ -145,7 +147,12 @@ struct net {
 #endif
 	struct sock		*diag_nlsk;
 	atomic_t		fnhe_genid;
+#ifdef CONFIG_BPF_SYSCALL
+	struct netns_bpf	bpf;
+#endif
 };
+
+u64 net_gen_cookie(struct net *net);
 
 #include <linux/seq_file_net.h>
 

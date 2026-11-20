@@ -358,14 +358,23 @@ int dwc3_send_gadget_ep_cmd(struct dwc3_ep *dep, unsigned cmd,
 		}
 	}
 
-	if (cmd == DWC3_DEPCMD_STARTTRANSFER) {
-		int		needs_wakeup;
+	if (DWC3_DEPCMD_CMD(cmd) == DWC3_DEPCMD_STARTTRANSFER) {
+		u8		link_state;
 
-		needs_wakeup = (dwc->link_state == DWC3_LINK_STATE_U1 ||
-				dwc->link_state == DWC3_LINK_STATE_U2 ||
-				dwc->link_state == DWC3_LINK_STATE_U3);
-
-		if (unlikely(needs_wakeup)) {
+		/*
+		 * Backport of upstream "usb: dwc3: gadget: Fix START_TRANSFER
+		 * link state check": dwc->link_state is only tracked while the
+		 * link state change event is enabled and goes stale across
+		 * disconnects, leading to a bogus remote wakeup ("wakeup failed
+		 * --> -22") and a stuck ep0. Read the current state from DSTS.
+		 *
+		 * Initiate remote wakeup if the link is in U3 (SS: suspended,
+		 * HS: suspend) or, when operating in HS/FS, U2 (L1 sleep).
+		 */
+		link_state = DWC3_DSTS_USBLNKST(dwc3_readl(dwc->regs, DWC3_DSTS));
+		if (link_state == DWC3_LINK_STATE_U3 ||
+		    (link_state == DWC3_LINK_STATE_U2 &&
+		     dwc->gadget.speed < USB_SPEED_SUPER)) {
 			ret = __dwc3_gadget_wakeup(dwc);
 			dev_WARN_ONCE(dwc->dev, ret, "wakeup failed --> %d\n",
 					ret);

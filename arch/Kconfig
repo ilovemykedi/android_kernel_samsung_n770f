@@ -6,6 +6,8 @@ config KEXEC_CORE
 	bool
 
 config HOTPLUG_SMT
+	bool
+
 config HAVE_IMA_KEXEC
 	bool
 

@@ -66,6 +66,7 @@
 #include <linux/kexec.h>
 #include <linux/bpf.h>
 #include <linux/mount.h>
+#include <linux/userfaultfd_k.h>
 
 #include <linux/uaccess.h>
 #include <asm/processor.h>
@@ -223,6 +224,60 @@ static int sysrq_sysctl_handler(struct ctl_table *table, int write,
 	return 0;
 }
 
+#endif
+
+#ifdef CONFIG_BPF_SYSCALL
+
+void __weak unpriv_ebpf_notify(int new_state)
+{
+}
+
+static int bpf_unpriv_handler(struct ctl_table *table, int write,
+                             void *buffer, size_t *lenp, loff_t *ppos)
+{
+	int ret, unpriv_enable = *(int *)table->data;
+	bool locked_state = unpriv_enable == 1;
+	struct ctl_table tmp = *table;
+
+	if (write && !capable(CAP_SYS_ADMIN))
+		return -EPERM;
+
+	tmp.data = &unpriv_enable;
+	ret = proc_dointvec_minmax(&tmp, write, buffer, lenp, ppos);
+	if (write && !ret) {
+		if (locked_state && unpriv_enable != 1)
+			return -EPERM;
+		*(int *)table->data = unpriv_enable;
+	}
+
+	unpriv_ebpf_notify(unpriv_enable);
+
+	return ret;
+}
+
+static int bpf_stats_handler(struct ctl_table *table, int write,
+			     void *buffer, size_t *lenp, loff_t *ppos)
+{
+	int bpf_stats = sysctl_bpf_stats_enabled;
+	struct ctl_table tmp = *table;
+	int ret;
+
+	if (write && !capable(CAP_SYS_ADMIN))
+		return -EPERM;
+
+	mutex_lock(&bpf_stats_enabled_mutex);
+	tmp.data = &bpf_stats;
+	ret = proc_dointvec_minmax(&tmp, write, buffer, lenp, ppos);
+	if (write && !ret && bpf_stats != sysctl_bpf_stats_enabled) {
+		if (bpf_stats)
+			static_key_slow_inc(&bpf_stats_enabled_key.key);
+		else
+			static_key_slow_dec(&bpf_stats_enabled_key.key);
+		sysctl_bpf_stats_enabled = bpf_stats;
+	}
+	mutex_unlock(&bpf_stats_enabled_mutex);
+	return ret;
+}
 #endif
 
 static struct ctl_table kern_table[];
@@ -502,6 +557,22 @@ static struct ctl_table kern_table[] = {
 		.mode		= 0644,
 		.proc_handler	= sched_rr_handler,
 	},
+#ifdef CONFIG_UCLAMP_TASK
+	{
+		.procname	= "sched_util_clamp_min",
+		.data		= &sysctl_sched_uclamp_util_min,
+		.maxlen		= sizeof(unsigned int),
+		.mode		= 0644,
+		.proc_handler	= sysctl_sched_uclamp_handler,
+	},
+	{
+		.procname	= "sched_util_clamp_max",
+		.data		= &sysctl_sched_uclamp_util_max,
+		.maxlen		= sizeof(unsigned int),
+		.mode		= 0644,
+		.proc_handler	= sysctl_sched_uclamp_handler,
+	},
+#endif
 #ifdef CONFIG_SCHED_AUTOGROUP
 	{
 		.procname	= "sched_autogroup_enabled",
@@ -1281,9 +1352,18 @@ static struct ctl_table kern_table[] = {
 		.data		= &sysctl_unprivileged_bpf_disabled,
 		.maxlen		= sizeof(sysctl_unprivileged_bpf_disabled),
 		.mode		= 0644,
-		/* only handle a transition from default "0" to "1" */
-		.proc_handler	= proc_dointvec_minmax,
-		.extra1		= &one,
+		/* upstream 5.13+ semantics: 0, 1 (locked) or 2 */
+		.proc_handler	= bpf_unpriv_handler,
+		.extra1		= &zero,
+		.extra2		= &two,
+	},
+	{
+		.procname	= "bpf_stats_enabled",
+		.data		= &sysctl_bpf_stats_enabled,
+		.maxlen		= sizeof(sysctl_bpf_stats_enabled),
+		.mode		= 0644,
+		.proc_handler	= bpf_stats_handler,
+		.extra1		= &zero,
 		.extra2		= &one,
 	},
 #endif
@@ -1742,6 +1822,17 @@ static struct ctl_table vm_table[] = {
 		.proc_handler	= proc_dointvec_minmax,
 		.extra1		= (void *)&mmap_rnd_compat_bits_min,
 		.extra2		= (void *)&mmap_rnd_compat_bits_max,
+	},
+#endif
+#ifdef CONFIG_USERFAULTFD
+	{
+		.procname	= "unprivileged_userfaultfd",
+		.data		= &sysctl_unprivileged_userfaultfd,
+		.maxlen		= sizeof(sysctl_unprivileged_userfaultfd),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec_minmax,
+		.extra1		= &zero,
+		.extra2		= &one,
 	},
 #endif
 	{ }

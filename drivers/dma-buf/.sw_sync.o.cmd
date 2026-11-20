@@ -1,4 +1,4 @@
-cmd_drivers/dma-buf/sw_sync.o := ./buildtools/samsung-toolchain/clang/host/linux-x86/clang-r349610-jopp/bin/clang -Wp,-MD,drivers/dma-buf/.sw_sync.o.d -nostdinc -isystem /root/kernel/n770f/buildtools/samsung-toolchain/clang/host/linux-x86/clang-r349610-jopp/lib64/clang/8.0.8/include -I./arch/arm64/include -I./arch/arm64/include/generated/uapi -I./arch/arm64/include/generated  -I./include -I./arch/arm64/include/uapi -I./include/uapi -I./include/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Qunused-arguments -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -fshort-wchar -Werror-implicit-function-declaration -Werror -std=gnu89 -Wno-sizeof-pointer-div --target=aarch64-linux-gnu --prefix=/root/kernel/n770f/buildtools/samsung-toolchain/gcc-cfp/gcc-cfp-jopp-only/aarch64-linux-android-4.9/bin/ --gcc-toolchain=/root/kernel/n770f/buildtools/samsung-toolchain/gcc-cfp/gcc-cfp-jopp-only/aarch64-linux-android-4.9 -no-integrated-as -Werror=unknown-warning-option -fno-PIE -mno-implicit-float -DCONFIG_BROKEN_GAS_INST=1 -fno-asynchronous-unwind-tables -fno-pic -Wno-asm-operand-widths -fno-delete-null-pointer-checks -Wno-address-of-packed-member -Os -Wframe-larger-than=4096 -fstack-protector-strong -Wno-format-invalid-specifier -Wno-gnu -Wno-duplicate-decl-specifier -Wno-tautological-compare -mno-global-merge -Wno-unused-const-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-merge-all-constants -fno-stack-check -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Werror=incompatible-pointer-types -Wno-initializer-overrides -Wno-unused-value -Wno-format -Wno-sign-compare -Wno-format-zero-length -Wno-uninitialized    -DKBUILD_BASENAME='"sw_sync"'  -DKBUILD_MODNAME='"sw_sync"' -c -o drivers/dma-buf/.tmp_sw_sync.o drivers/dma-buf/sw_sync.c
+cmd_drivers/dma-buf/sw_sync.o := ./buildtools/samsung-toolchain/clang/host/linux-x86/clang-r349610-jopp/bin/clang -Wp,-MD,drivers/dma-buf/.sw_sync.o.d -nostdinc -isystem /root/kernel/n770f/buildtools/samsung-toolchain/clang/host/linux-x86/clang-r349610-jopp/lib64/clang/8.0.8/include -I./arch/arm64/include -I./arch/arm64/include/generated/uapi -I./arch/arm64/include/generated  -I./include -I./arch/arm64/include/uapi -I./include/uapi -I./include/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Qunused-arguments -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -fshort-wchar -Werror-implicit-function-declaration -Werror -std=gnu89 -Wno-sizeof-pointer-div --target=aarch64-linux-gnu --prefix=/root/kernel/n770f/buildtools/samsung-toolchain/gcc-cfp/gcc-cfp-jopp-only/aarch64-linux-android-4.9/bin/ --gcc-toolchain=/root/kernel/n770f/buildtools/samsung-toolchain/gcc-cfp/gcc-cfp-jopp-only/aarch64-linux-android-4.9 -no-integrated-as -Werror=unknown-warning-option -fno-PIE -mno-implicit-float -Xclang -target-cpu -Xclang exynos-m3 -DCONFIG_BROKEN_GAS_INST=1 -fno-asynchronous-unwind-tables -fno-pic -Wno-asm-operand-widths -fno-delete-null-pointer-checks -Wno-sizeof-array-argument -Wno-address-of-packed-member -O2 -Wframe-larger-than=4096 -fstack-protector-strong -Wno-format-invalid-specifier -Wno-gnu -Wno-duplicate-decl-specifier -Wno-tautological-compare -mno-global-merge -Wno-unused-const-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-merge-all-constants -fno-stack-check -Werror=implicit-int -Werror=strict-prototypes -Wno-strict-prototypes -Werror=date-time -Werror=incompatible-pointer-types -Wno-initializer-overrides -Wno-unused-value -Wno-format -Wno-sign-compare -Wno-format-zero-length -Wno-uninitialized    -DKBUILD_BASENAME='"sw_sync"'  -DKBUILD_MODNAME='"sw_sync"' -c -o drivers/dma-buf/.tmp_sw_sync.o drivers/dma-buf/sw_sync.c
 
 source_drivers/dma-buf/sw_sync.o := drivers/dma-buf/sw_sync.c
 
@@ -88,6 +88,7 @@ deps_drivers/dma-buf/sw_sync.o := \
     $(wildcard include/config/preempt/voluntary.h) \
     $(wildcard include/config/debug/atomic/sleep.h) \
     $(wildcard include/config/prove/locking.h) \
+    $(wildcard include/config/arch/has/refcount.h) \
     $(wildcard include/config/panic/timeout.h) \
     $(wildcard include/config/tracing.h) \
   /root/kernel/n770f/buildtools/samsung-toolchain/clang/host/linux-x86/clang-r349610-jopp/lib64/clang/8.0.8/include/stdarg.h \
@@ -638,33 +639,6 @@ deps_drivers/dma-buf/sw_sync.o := \
     $(wildcard include/config/pm/sleep.h) \
     $(wildcard include/config/hpa.h) \
   include/uapi/linux/magic.h \
-  include/linux/cgroup-defs.h \
-    $(wildcard include/config/sock/cgroup/data.h) \
-  include/uapi/linux/limits.h \
-  include/linux/idr.h \
-  include/linux/percpu-refcount.h \
-  include/linux/percpu-rwsem.h \
-  include/linux/rcu_sync.h \
-  include/linux/bpf-cgroup.h \
-    $(wildcard include/config/cgroup/bpf.h) \
-  include/uapi/linux/bpf.h \
-  include/uapi/linux/bpf_common.h \
-  include/linux/psi_types.h \
-    $(wildcard include/config/psi.h) \
-  include/linux/kthread.h \
-  include/linux/kref.h \
-  include/linux/cgroup_subsys.h \
-    $(wildcard include/config/cgroup/cpuacct.h) \
-    $(wildcard include/config/cgroup/schedtune.h) \
-    $(wildcard include/config/blk/cgroup.h) \
-    $(wildcard include/config/cgroup/device.h) \
-    $(wildcard include/config/cgroup/freezer.h) \
-    $(wildcard include/config/cgroup/net/classid.h) \
-    $(wildcard include/config/cgroup/perf.h) \
-    $(wildcard include/config/cgroup/net/prio.h) \
-    $(wildcard include/config/cgroup/hugetlb.h) \
-    $(wildcard include/config/cgroup/pids.h) \
-    $(wildcard include/config/cgroup/debug.h) \
   include/linux/sec_debug_types.h \
   include/uapi/linux/stat.h \
   include/linux/list_lru.h \
@@ -679,9 +653,12 @@ deps_drivers/dma-buf/sw_sync.o := \
   include/uapi/asm-generic/fcntl.h \
   include/uapi/linux/fiemap.h \
   include/linux/migrate_mode.h \
+  include/linux/percpu-rwsem.h \
+  include/linux/rcu_sync.h \
   include/linux/delayed_call.h \
   include/uapi/linux/fs.h \
     $(wildcard include/config/epm.h) \
+  include/uapi/linux/limits.h \
   include/uapi/linux/ioctl.h \
   arch/arm64/include/generated/asm/ioctl.h \
   include/asm-generic/ioctl.h \
@@ -722,6 +699,7 @@ deps_drivers/dma-buf/sw_sync.o := \
   include/linux/kasan.h \
   include/linux/sync_file.h \
     $(wildcard include/config/debug/fs.h) \
+  include/linux/kref.h \
   include/linux/dma-fence.h \
     $(wildcard include/config/dma/fence/trace.h) \
   include/linux/dma-fence-array.h \
@@ -740,6 +718,8 @@ deps_drivers/dma-buf/sw_sync.o := \
   include/trace/trace_events.h \
   include/linux/trace_events.h \
     $(wildcard include/config/bpf/events.h) \
+    $(wildcard include/config/kprobe/events.h) \
+    $(wildcard include/config/uprobe/events.h) \
   include/linux/ring_buffer.h \
     $(wildcard include/config/ring/buffer/allow/swap.h) \
     $(wildcard include/config/ring/buffer.h) \
@@ -755,6 +735,7 @@ deps_drivers/dma-buf/sw_sync.o := \
     $(wildcard include/config/parisc.h) \
     $(wildcard include/config/metag.h) \
     $(wildcard include/config/ia64.h) \
+    $(wildcard include/config/x86/intel/mpx.h) \
     $(wildcard include/config/shmem.h) \
     $(wildcard include/config/debug/vm/rb.h) \
     $(wildcard include/config/page/poisoning.h) \
@@ -762,6 +743,7 @@ deps_drivers/dma-buf/sw_sync.o := \
     $(wildcard include/config/hibernation.h) \
     $(wildcard include/config/hugetlbfs.h) \
   include/linux/range.h \
+  include/linux/percpu-refcount.h \
   include/linux/page_ext.h \
     $(wildcard include/config/idle/page/tracking.h) \
   include/linux/stacktrace.h \
@@ -805,6 +787,7 @@ deps_drivers/dma-buf/sw_sync.o := \
   include/linux/perf_event.h \
     $(wildcard include/config/event/tracing.h) \
     $(wildcard include/config/function/tracer.h) \
+    $(wildcard include/config/cgroup/perf.h) \
     $(wildcard include/config/cpu/sup/intel.h) \
   include/uapi/linux/perf_event.h \
   arch/arm64/include/asm/perf_event.h \
@@ -872,6 +855,7 @@ deps_drivers/dma-buf/sw_sync.o := \
   include/linux/sysfs.h \
   include/linux/kernfs.h \
     $(wildcard include/config/kernfs.h) \
+  include/linux/idr.h \
   include/linux/kobject_ns.h \
   include/linux/klist.h \
   include/linux/pinctrl/devinfo.h \
@@ -890,22 +874,86 @@ deps_drivers/dma-buf/sw_sync.o := \
   include/linux/irq_work.h \
     $(wildcard include/config/irq/work.h) \
   arch/arm64/include/asm/irq_work.h \
-  include/linux/jump_label_ratelimit.h \
-  include/linux/perf_regs.h \
-    $(wildcard include/config/have/perf/regs.h) \
-  arch/arm64/include/uapi/asm/perf_regs.h \
-  include/linux/cgroup.h \
-    $(wildcard include/config/cgroup/data.h) \
-  include/uapi/linux/cgroupstats.h \
-  include/uapi/linux/taskstats.h \
-  include/linux/user_namespace.h \
-    $(wildcard include/config/persistent/keyrings.h) \
   include/linux/security.h \
     $(wildcard include/config/security/network.h) \
     $(wildcard include/config/security/network/xfrm.h) \
     $(wildcard include/config/security/path.h) \
     $(wildcard include/config/securityfs.h) \
+  include/linux/jump_label_ratelimit.h \
+  include/linux/perf_regs.h \
+    $(wildcard include/config/have/perf/regs.h) \
+  arch/arm64/include/uapi/asm/perf_regs.h \
+  include/linux/cgroup.h \
+    $(wildcard include/config/sock/cgroup/data.h) \
+    $(wildcard include/config/cgroup/net/prio.h) \
+    $(wildcard include/config/cgroup/net/classid.h) \
+    $(wildcard include/config/cgroup/data.h) \
+  include/uapi/linux/cgroupstats.h \
+  include/uapi/linux/taskstats.h \
+  include/linux/user_namespace.h \
+    $(wildcard include/config/persistent/keyrings.h) \
+  include/linux/cgroup-defs.h \
+  include/linux/bpf-cgroup.h \
+    $(wildcard include/config/cgroup/bpf.h) \
+  include/linux/bpf.h \
+    $(wildcard include/config/bpf/jit.h) \
+    $(wildcard include/config/net.h) \
+    $(wildcard include/config/bpf/jit/always/on.h) \
+    $(wildcard include/config/bpf/stream/parser.h) \
+    $(wildcard include/config/inet.h) \
+  include/uapi/linux/bpf.h \
+    $(wildcard include/config/efficient/unaligned/access.h) \
+  include/uapi/linux/bpf_common.h \
+  include/linux/rbtree_latch.h \
+  include/linux/module.h \
+    $(wildcard include/config/modules/tree/lookup.h) \
+    $(wildcard include/config/livepatch.h) \
+    $(wildcard include/config/module/sig.h) \
+    $(wildcard include/config/module/unload.h) \
+    $(wildcard include/config/constructors.h) \
+  include/linux/kmod.h \
+  include/linux/elf.h \
+  arch/arm64/include/asm/elf.h \
+  arch/arm64/include/generated/asm/user.h \
+  include/asm-generic/user.h \
+  include/uapi/linux/elf.h \
+  include/uapi/linux/elf-em.h \
+  include/linux/moduleparam.h \
+    $(wildcard include/config/alpha.h) \
+    $(wildcard include/config/ppc64.h) \
+  include/linux/extable.h \
+  include/linux/cfi.h \
+    $(wildcard include/config/cfi/clang/shadow.h) \
+  arch/arm64/include/asm/module.h \
+    $(wildcard include/config/arm64/module/plts.h) \
+    $(wildcard include/config/randomize/base.h) \
+  include/asm-generic/module.h \
+    $(wildcard include/config/have/mod/arch/specific.h) \
+    $(wildcard include/config/modules/use/elf/rel.h) \
+    $(wildcard include/config/modules/use/elf/rela.h) \
+  include/linux/refcount.h \
+    $(wildcard include/config/refcount/full.h) \
+  include/linux/u64_stats_sync.h \
+  include/linux/bpfptr.h \
+  include/linux/bpf_types.h \
+    $(wildcard include/config/bpf/lirc/mode2.h) \
+    $(wildcard include/config/bpf/lsm.h) \
+    $(wildcard include/config/fuse/bpf.h) \
+    $(wildcard include/config/xdp/sockets.h) \
+  include/linux/psi_types.h \
+    $(wildcard include/config/psi.h) \
+  include/linux/kthread.h \
+  include/linux/cgroup_subsys.h \
+    $(wildcard include/config/cgroup/cpuacct.h) \
+    $(wildcard include/config/cgroup/schedtune.h) \
+    $(wildcard include/config/blk/cgroup.h) \
+    $(wildcard include/config/cgroup/device.h) \
+    $(wildcard include/config/cgroup/freezer.h) \
+    $(wildcard include/config/cgroup/hugetlb.h) \
+    $(wildcard include/config/cgroup/pids.h) \
+    $(wildcard include/config/cgroup/debug.h) \
   include/trace/perf.h \
+  include/trace/bpf_probe.h \
 
 drivers/dma-buf/sw_sync.o: $(deps_drivers/dma-buf/sw_sync.o)
 

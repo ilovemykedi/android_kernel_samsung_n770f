@@ -123,4 +123,7 @@ extern int __close_fd(struct files_struct *files,
 
 extern struct kmem_cache *files_cachep;
 
+struct task_struct;
+struct file *task_lookup_next_fd_rcu(struct task_struct *task, unsigned int *fd);
+
 #endif /* __LINUX_FDTABLE_H */

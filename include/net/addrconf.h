@@ -283,6 +283,14 @@ static inline struct inet6_dev *__in6_dev_get(const struct net_device *dev)
 	return rcu_dereference_rtnl(dev->ip6_ptr);
 }
 
+static inline struct inet6_dev *__in6_dev_get_safely(const struct net_device *dev)
+{
+	if (likely(dev))
+		return rcu_dereference_rtnl(dev->ip6_ptr);
+	else
+		return NULL;
+}
+
 /**
  * in6_dev_get - get inet6_dev pointer from netdevice
  * @dev: network device

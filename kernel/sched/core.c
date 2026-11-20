@@ -85,6 +85,7 @@
 #include <asm/paravirt.h>
 #endif
 
+#include <linux/cgroup-defs.h>
 #include "sched.h"
 #include "../workqueue_internal.h"
 #include "../smpboot.h"
@@ -8078,6 +8079,35 @@ void ___might_sleep(const char *file, int line, int preempt_offset)
 	add_taint(TAINT_WARN, LOCKDEP_STILL_OK);
 }
 EXPORT_SYMBOL(___might_sleep);
+
+void __cant_sleep(const char *file, int line, int preempt_offset)
+{
+	static unsigned long prev_jiffy;
+
+	if (irqs_disabled())
+		return;
+
+	if (!IS_ENABLED(CONFIG_PREEMPT_COUNT))
+		return;
+
+	if (preempt_count() > preempt_offset)
+		return;
+
+	if (time_before(jiffies, prev_jiffy + HZ) && prev_jiffy)
+		return;
+	prev_jiffy = jiffies;
+
+	printk(KERN_ERR "BUG: assuming atomic context at %s:%d\n",
+	       file, line);
+	printk(KERN_ERR
+	       "in_atomic(): %d, irqs_disabled(): %d, pid: %d, name: %s\n",
+	       in_atomic(), irqs_disabled(), current->pid, current->comm);
+
+	debug_show_held_locks(current);
+	dump_stack();
+	add_taint(TAINT_WARN, LOCKDEP_STILL_OK);
+}
+EXPORT_SYMBOL_GPL(__cant_sleep);
 #endif
 
 #ifdef CONFIG_MAGIC_SYSRQ
@@ -8678,6 +8708,17 @@ int sched_rr_handler(struct ctl_table *table, int write,
 static inline struct task_group *css_tg(struct cgroup_subsys_state *css)
 {
 	return css ? container_of(css, struct task_group, css) : NULL;
+}
+
+void threadgroup_change_begin(struct task_struct *tsk)
+{
+	might_sleep();
+	cgroup_threadgroup_change_begin(tsk);
+}
+
+void threadgroup_change_end(struct task_struct *tsk)
+{
+	cgroup_threadgroup_change_end(tsk);
 }
 
 static struct cgroup_subsys_state *

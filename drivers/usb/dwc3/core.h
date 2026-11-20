@@ -493,6 +493,7 @@
 #define DWC3_DEPCMD_ENDTRANSFER		(0x08 << 0)
 #define DWC3_DEPCMD_UPDATETRANSFER	(0x07 << 0)
 #define DWC3_DEPCMD_STARTTRANSFER	(0x06 << 0)
+#define DWC3_DEPCMD_CMD(x)		((x) & 0xf)
 #define DWC3_DEPCMD_CLEARSTALL		(0x05 << 0)
 #define DWC3_DEPCMD_SETSTALL		(0x04 << 0)
 /* This applies for core versions 1.90a and earlier */

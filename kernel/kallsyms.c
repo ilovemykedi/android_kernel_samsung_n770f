@@ -24,6 +24,8 @@
 #include <linux/ctype.h>
 #include <linux/slab.h>
 #include <linux/compiler.h>
+#include <linux/security.h>
+#include <linux/perf_event.h>
 #if defined(CONFIG_SEC_DEBUG)
 #include <linux/sec_debug.h>
 #endif
@@ -715,3 +717,33 @@ static int __init kallsyms_init(void)
 	return 0;
 }
 device_initcall(kallsyms_init);
+
+/*
+ * Backported from upstream for the BPF subsystem: decide whether raw kernel
+ * addresses may be shown to a given credential.
+ */
+static inline int kallsyms_for_perf(void)
+{
+#ifdef CONFIG_PERF_EVENTS
+	extern int sysctl_perf_event_paranoid;
+	if (sysctl_perf_event_paranoid <= 1)
+		return 1;
+#endif
+	return 0;
+}
+
+int kallsyms_show_value(const struct cred *cred)
+{
+	switch (kptr_restrict) {
+	case 0:
+		if (kallsyms_for_perf())
+			return 1;
+	/* fallthrough */
+	case 1:
+		if (!security_capable_noaudit(cred, &init_user_ns, CAP_SYSLOG))
+			return 1;
+	/* fallthrough */
+	default:
+		return 0;
+	}
+}

@@ -242,3 +242,12 @@ void __init nsfs_init(void)
 		panic("can't set nsfs up\n");
 	nsfs_mnt->mnt_sb->s_flags &= ~MS_NOUSER;
 }
+
+/**
+ * ns_match() - Returns true if current namespace matches dev/ino provided.
+ * (backported for BPF)
+ */
+bool ns_match(const struct ns_common *ns, dev_t dev, ino_t ino)
+{
+	return (ns->inum == ino) && (nsfs_mnt->mnt_sb->s_dev == dev);
+}

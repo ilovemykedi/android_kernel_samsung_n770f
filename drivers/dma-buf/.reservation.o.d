@@ -144,11 +144,5 @@ reservation.o: drivers/dma-buf/reservation.c include/linux/kconfig.h \
   include/linux/task_io_accounting.h include/linux/latencytop.h \
   include/linux/cred.h include/linux/key.h include/linux/assoc_array.h \
   include/linux/selinux.h include/linux/gfp.h include/uapi/linux/magic.h \
-  include/linux/cgroup-defs.h include/uapi/linux/limits.h \
-  include/linux/idr.h include/linux/percpu-refcount.h \
-  include/linux/percpu-rwsem.h include/linux/rcu_sync.h \
-  include/linux/bpf-cgroup.h include/uapi/linux/bpf.h \
-  include/uapi/linux/bpf_common.h include/linux/psi_types.h \
-  include/linux/kthread.h include/linux/cgroup_subsys.h \
   include/linux/sec_debug_types.h include/linux/slab.h \
   include/linux/kmemleak.h include/linux/kasan.h

@@ -1050,3 +1050,22 @@ seq_hlist_next_percpu(void *v, struct hlist_head __percpu *head,
 	return NULL;
 }
 EXPORT_SYMBOL(seq_hlist_next_percpu);
+
+#ifdef CONFIG_BINARY_PRINTF
+/* Backported for bpf_seq_printf() */
+void seq_bprintf(struct seq_file *m, const char *f, const u32 *binary)
+{
+	int len;
+
+	if (m->count < m->size) {
+		len = bstr_printf(m->buf + m->count, m->size - m->count, f,
+				  binary);
+		if (m->count + len < m->size) {
+			m->count += len;
+			return;
+		}
+	}
+	seq_set_overflow(m);
+}
+EXPORT_SYMBOL(seq_bprintf);
+#endif

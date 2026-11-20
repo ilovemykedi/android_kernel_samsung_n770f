@@ -1037,3 +1037,71 @@ static int __init init_default_flow_dissectors(void)
 }
 
 core_initcall(init_default_flow_dissectors);
+
+#ifdef CONFIG_BPF_SYSCALL
+#include <linux/bpf.h>
+#include <net/net_namespace.h>
+int flow_dissector_bpf_prog_attach_check(struct net *net,
+					 struct bpf_prog *prog)
+{
+	enum netns_bpf_attach_type type = NETNS_BPF_FLOW_DISSECTOR;
+
+	if (net == &init_net) {
+		/* BPF flow dissector in the root namespace overrides
+		 * any per-net-namespace one. When attaching to root,
+		 * make sure we don't have any BPF program attached
+		 * to the non-root namespaces.
+		 */
+		struct net *ns;
+
+		for_each_net(ns) {
+			if (ns == &init_net)
+				continue;
+			if (rcu_access_pointer(ns->bpf.run_array[type]))
+				return -EEXIST;
+		}
+	} else {
+		/* Make sure root flow dissector is not attached
+		 * when attaching to the non-root namespace.
+		 */
+		if (rcu_access_pointer(init_net.bpf.run_array[type]))
+			return -EEXIST;
+	}
+
+	return 0;
+}
+#endif /* CONFIG_BPF_SYSCALL */
+
+#include <linux/filter.h>
+bool bpf_flow_dissect(struct bpf_prog *prog, struct bpf_flow_dissector *ctx,
+		      __be16 proto, int nhoff, int hlen, unsigned int flags)
+{
+	struct bpf_flow_keys *flow_keys = ctx->flow_keys;
+	u32 bpf_flags = 0;
+	u32 result;
+
+	memset(flow_keys, 0, sizeof(*flow_keys));
+	flow_keys->n_proto = proto;
+	flow_keys->nhoff = nhoff;
+	flow_keys->thoff = flow_keys->nhoff;
+
+	/* The 4.9 flow-dissector flags contain STOP_AT_L3 between the
+	 * UAPI-visible bits, so translate them instead of copying them.
+	 */
+	if (flags & FLOW_DISSECTOR_F_PARSE_1ST_FRAG)
+		bpf_flags |= BPF_FLOW_DISSECTOR_F_PARSE_1ST_FRAG;
+	if (flags & FLOW_DISSECTOR_F_STOP_AT_FLOW_LABEL)
+		bpf_flags |= BPF_FLOW_DISSECTOR_F_STOP_AT_FLOW_LABEL;
+	if (flags & FLOW_DISSECTOR_F_STOP_AT_ENCAP)
+		bpf_flags |= BPF_FLOW_DISSECTOR_F_STOP_AT_ENCAP;
+	flow_keys->flags = bpf_flags;
+
+	result = bpf_prog_run_pin_on_cpu(prog, ctx);
+
+	flow_keys->nhoff = clamp_t(u16, flow_keys->nhoff, nhoff, hlen);
+	flow_keys->thoff = clamp_t(u16, flow_keys->thoff,
+				   flow_keys->nhoff, hlen);
+
+	return result == BPF_OK;
+}
+

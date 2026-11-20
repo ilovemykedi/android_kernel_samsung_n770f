@@ -149,20 +149,15 @@ sync_file.o: drivers/dma-buf/sync_file.c include/linux/kconfig.h \
   include/linux/task_io_accounting.h include/linux/latencytop.h \
   include/linux/cred.h include/linux/key.h include/linux/assoc_array.h \
   include/linux/selinux.h include/linux/gfp.h include/uapi/linux/magic.h \
-  include/linux/cgroup-defs.h include/uapi/linux/limits.h \
-  include/linux/idr.h include/linux/percpu-refcount.h \
+  include/linux/sec_debug_types.h include/uapi/linux/stat.h \
+  include/linux/list_lru.h include/linux/shrinker.h \
+  include/linux/radix-tree.h include/linux/semaphore.h \
+  include/linux/fcntl.h include/uapi/linux/fcntl.h \
+  arch/arm64/include/uapi/asm/fcntl.h include/uapi/asm-generic/fcntl.h \
+  include/uapi/linux/fiemap.h include/linux/migrate_mode.h \
   include/linux/percpu-rwsem.h include/linux/rcu_sync.h \
-  include/linux/bpf-cgroup.h include/uapi/linux/bpf.h \
-  include/uapi/linux/bpf_common.h include/linux/psi_types.h \
-  include/linux/kthread.h include/linux/kref.h \
-  include/linux/cgroup_subsys.h include/linux/sec_debug_types.h \
-  include/uapi/linux/stat.h include/linux/list_lru.h \
-  include/linux/shrinker.h include/linux/radix-tree.h \
-  include/linux/semaphore.h include/linux/fcntl.h \
-  include/uapi/linux/fcntl.h arch/arm64/include/uapi/asm/fcntl.h \
-  include/uapi/asm-generic/fcntl.h include/uapi/linux/fiemap.h \
-  include/linux/migrate_mode.h include/linux/delayed_call.h \
-  include/uapi/linux/fs.h include/uapi/linux/ioctl.h \
+  include/linux/delayed_call.h include/uapi/linux/fs.h \
+  include/uapi/linux/limits.h include/uapi/linux/ioctl.h \
   arch/arm64/include/generated/asm/ioctl.h include/asm-generic/ioctl.h \
   include/uapi/asm-generic/ioctl.h include/linux/quota.h \
   include/linux/percpu_counter.h include/uapi/linux/dqblk_xfs.h \
@@ -180,5 +175,6 @@ sync_file.o: drivers/dma-buf/sync_file.c include/linux/kconfig.h \
   include/uapi/asm-generic/poll.h include/linux/slab.h \
   include/linux/kmemleak.h include/linux/kasan.h \
   include/linux/anon_inodes.h include/linux/sync_file.h \
-  include/linux/dma-fence.h include/linux/dma-fence-array.h \
-  include/uapi/linux/sync_file.h drivers/dma-buf/sync_debug.h
+  include/linux/kref.h include/linux/dma-fence.h \
+  include/linux/dma-fence-array.h include/uapi/linux/sync_file.h \
+  drivers/dma-buf/sync_debug.h

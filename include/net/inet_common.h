@@ -18,6 +18,11 @@ int inet_stream_connect(struct socket *sock, struct sockaddr *uaddr,
 			int addr_len, int flags);
 int __inet_stream_connect(struct socket *sock, struct sockaddr *uaddr,
 			  int addr_len, int flags);
+/* flags filled by the cgroup BPF bind hook */
+#define BIND_NO_CAP_NET_BIND_SERVICE	(1 << 3)
+
+int inet_bpf_pre_connect(struct sock *sk, struct sockaddr *uaddr,
+			 int addr_len, bool locked);
 int inet_dgram_connect(struct socket *sock, struct sockaddr *uaddr,
 		       int addr_len, int flags);
 int inet_accept(struct socket *sock, struct socket *newsock, int flags);

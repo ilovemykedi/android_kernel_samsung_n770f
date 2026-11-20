@@ -745,6 +745,8 @@ TRACE_EVENT(sched_load_avg_cpu,
 		  __entry->util_avg_pelt, __entry->util_avg_walt)
 );
 
+struct rt_rq;
+
 TRACE_EVENT(sched_rt_load_avg_cpu,
 
 	TP_PROTO(int cpu, struct rt_rq *rt_rq),

@@ -3074,6 +3074,11 @@ static int find_module_sections(struct module *mod, struct load_info *info)
 					sizeof(*mod->trace_enums),
 					&mod->num_trace_enums);
 #endif
+#ifdef CONFIG_BPF_EVENTS
+	mod->bpf_raw_events = section_objs(info, "__bpf_raw_tp_map",
+					   sizeof(*mod->bpf_raw_events),
+					   &mod->num_bpf_raw_events);
+#endif
 #ifdef CONFIG_TRACING
 	mod->trace_bprintk_fmt_start = section_objs(info, "__trace_printk_fmt",
 					 sizeof(*mod->trace_bprintk_fmt_start),

@@ -301,6 +301,7 @@ int inet6_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len)
 	unsigned short snum;
 	bool saved_ipv6only;
 	int addr_type = 0;
+	u32 bpf_flags = 0;
 	int err = 0;
 
 	/* If the socket has its own bind function then use it. */
@@ -310,6 +311,14 @@ int inet6_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len)
 	if (addr_len < SIN6_LEN_RFC2133)
 		return -EINVAL;
 
+	/* BPF prog is run before any checks are done so that if the prog
+	 * changes context in a wrong way it will be caught.
+	 */
+	err = BPF_CGROUP_RUN_PROG_INET_BIND_LOCK(sk, uaddr,
+						 BPF_CGROUP_INET6_BIND, &bpf_flags);
+	if (err)
+		return err;
+
 	if (addr->sin6_family != AF_INET6)
 		return -EAFNOSUPPORT;
 
@@ -318,7 +327,9 @@ int inet6_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len)
 		return -EINVAL;
 
 	snum = ntohs(addr->sin6_port);
-	if (snum && snum < PROT_SOCK && !ns_capable(net->user_ns, CAP_NET_BIND_SERVICE))
+	if (snum && snum < PROT_SOCK &&
+	    !(bpf_flags & BIND_NO_CAP_NET_BIND_SERVICE) &&
+	    !ns_capable(net->user_ns, CAP_NET_BIND_SERVICE))
 		return -EACCES;
 
 	lock_sock(sk);

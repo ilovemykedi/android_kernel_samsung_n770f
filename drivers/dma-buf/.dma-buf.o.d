@@ -149,20 +149,15 @@ dma-buf.o: drivers/dma-buf/dma-buf.c include/linux/kconfig.h \
   include/linux/task_io_accounting.h include/linux/latencytop.h \
   include/linux/cred.h include/linux/key.h include/linux/assoc_array.h \
   include/linux/selinux.h include/linux/gfp.h include/uapi/linux/magic.h \
-  include/linux/cgroup-defs.h include/uapi/linux/limits.h \
-  include/linux/idr.h include/linux/percpu-refcount.h \
+  include/linux/sec_debug_types.h include/uapi/linux/stat.h \
+  include/linux/list_lru.h include/linux/shrinker.h \
+  include/linux/radix-tree.h include/linux/semaphore.h \
+  include/linux/fcntl.h include/uapi/linux/fcntl.h \
+  arch/arm64/include/uapi/asm/fcntl.h include/uapi/asm-generic/fcntl.h \
+  include/uapi/linux/fiemap.h include/linux/migrate_mode.h \
   include/linux/percpu-rwsem.h include/linux/rcu_sync.h \
-  include/linux/bpf-cgroup.h include/uapi/linux/bpf.h \
-  include/uapi/linux/bpf_common.h include/linux/psi_types.h \
-  include/linux/kthread.h include/linux/kref.h \
-  include/linux/cgroup_subsys.h include/linux/sec_debug_types.h \
-  include/uapi/linux/stat.h include/linux/list_lru.h \
-  include/linux/shrinker.h include/linux/radix-tree.h \
-  include/linux/semaphore.h include/linux/fcntl.h \
-  include/uapi/linux/fcntl.h arch/arm64/include/uapi/asm/fcntl.h \
-  include/uapi/asm-generic/fcntl.h include/uapi/linux/fiemap.h \
-  include/linux/migrate_mode.h include/linux/delayed_call.h \
-  include/uapi/linux/fs.h include/uapi/linux/ioctl.h \
+  include/linux/delayed_call.h include/uapi/linux/fs.h \
+  include/uapi/linux/limits.h include/uapi/linux/ioctl.h \
   arch/arm64/include/generated/asm/ioctl.h include/asm-generic/ioctl.h \
   include/uapi/asm-generic/ioctl.h include/linux/quota.h \
   include/linux/percpu_counter.h include/uapi/linux/dqblk_xfs.h \
@@ -172,11 +167,11 @@ dma-buf.o: drivers/dma-buf/dma-buf.c include/linux/kconfig.h \
   include/linux/slab.h include/linux/kmemleak.h include/linux/kasan.h \
   include/linux/dma-buf.h include/linux/file.h \
   include/linux/scatterlist.h include/linux/mm.h include/linux/range.h \
-  include/linux/page_ext.h include/linux/stacktrace.h \
-  include/linux/stackdepot.h include/linux/page_ref.h \
-  include/linux/page-flags.h include/linux/tracepoint-defs.h \
-  include/linux/static_key.h arch/arm64/include/asm/pgtable.h \
-  arch/arm64/include/asm/proc-fns.h \
+  include/linux/percpu-refcount.h include/linux/page_ext.h \
+  include/linux/stacktrace.h include/linux/stackdepot.h \
+  include/linux/page_ref.h include/linux/page-flags.h \
+  include/linux/tracepoint-defs.h include/linux/static_key.h \
+  arch/arm64/include/asm/pgtable.h arch/arm64/include/asm/proc-fns.h \
   arch/arm64/include/asm/pgtable-prot.h arch/arm64/include/asm/fixmap.h \
   arch/arm64/include/asm/boot.h include/asm-generic/fixmap.h \
   include/asm-generic/pgtable.h include/linux/huge_mm.h \
@@ -187,8 +182,8 @@ dma-buf.o: drivers/dma-buf/dma-buf.c include/linux/kconfig.h \
   include/asm-generic/io.h include/asm-generic/pci_iomap.h \
   include/linux/vmalloc.h include/linux/dma-mapping.h \
   include/linux/device.h include/linux/ioport.h include/linux/kobject.h \
-  include/linux/sysfs.h include/linux/kernfs.h \
-  include/linux/kobject_ns.h include/linux/klist.h \
+  include/linux/sysfs.h include/linux/kernfs.h include/linux/idr.h \
+  include/linux/kobject_ns.h include/linux/kref.h include/linux/klist.h \
   include/linux/pinctrl/devinfo.h include/linux/pinctrl/consumer.h \
   include/linux/seq_file.h include/linux/pinctrl/pinctrl-state.h \
   include/linux/pm.h include/linux/ratelimit.h \

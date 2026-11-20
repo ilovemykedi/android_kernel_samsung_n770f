@@ -431,12 +431,14 @@ struct sock {
 #endif
 
 	kmemcheck_bitfield_begin(flags);
-	unsigned int		sk_padding : 2,
+	u8			sk_padding : 1,
+				sk_kern_sock : 1,
 				sk_no_check_tx : 1,
 				sk_no_check_rx : 1,
-				sk_userlocks : 4,
-				sk_protocol  : 8,
-				sk_type      : 16;
+				sk_userlocks : 4;
+	/* plain fields (upstream 5.6 layout) so BPF ctx access can use them */
+	u16			sk_type;
+	u16			sk_protocol;
 #define SK_PROTOCOL_MAX U8_MAX
 	kmemcheck_bitfield_end(flags);
 
@@ -487,13 +489,38 @@ struct sock {
 						  struct sk_buff *skb);
 	void                    (*sk_destruct)(struct sock *sk);
 	struct sock_reuseport __rcu	*sk_reuseport_cb;
+#ifdef CONFIG_BPF_SYSCALL
+	struct bpf_local_storage __rcu	*sk_bpf_storage;
+#endif
 	struct rcu_head		sk_rcu;
 };
 
+/* flag bits in sk_user_data (backported for BPF) */
+#define NO_QUEUE_MAPPING	USHRT_MAX
+#define SK_USER_DATA_NOCOPY	1UL
+#define SK_USER_DATA_BPF	2UL
+#define SK_USER_DATA_PSOCK	4UL
+#define SK_USER_DATA_PTRMASK	~(SK_USER_DATA_NOCOPY | SK_USER_DATA_BPF | \
+				  SK_USER_DATA_PSOCK)
+
 #define __sk_user_data(sk) ((*((void __rcu **)&(sk)->sk_user_data)))
+
+static inline void *
+__rcu_dereference_sk_user_data_with_flags(const struct sock *sk,
+					  uintptr_t flags)
+{
+	uintptr_t sk_user_data = (uintptr_t)rcu_dereference(__sk_user_data(sk));
+
+	if ((sk_user_data & flags) == flags)
+		return (void *)(sk_user_data & SK_USER_DATA_PTRMASK);
+	return NULL;
+}
 
 #define rcu_dereference_sk_user_data(sk)	rcu_dereference(__sk_user_data((sk)))
 #define rcu_assign_sk_user_data(sk, ptr)	rcu_assign_pointer(__sk_user_data((sk)), ptr)
+#define __rcu_assign_sk_user_data_with_flags(sk, ptr, flags)		\
+	rcu_assign_pointer(__sk_user_data((sk)),			\
+			   (void *)((uintptr_t)(ptr) | (uintptr_t)(flags)))
 
 /*
  * SK_CAN_REUSE and SK_NO_REUSE on a socket mean that the socket is OK
@@ -802,6 +829,15 @@ static inline void sock_set_flag(struct sock *sk, enum sock_flags flag)
 static inline void sock_reset_flag(struct sock *sk, enum sock_flags flag)
 {
 	__clear_bit(flag, &sk->sk_flags);
+}
+
+static inline void sock_valbool_flag(struct sock *sk, enum sock_flags bit,
+				     int valbool)
+{
+	if (valbool)
+		sock_set_flag(sk, bit);
+	else
+		sock_reset_flag(sk, bit);
 }
 
 static inline bool sock_flag(const struct sock *sk, enum sock_flags flag)
@@ -2337,6 +2373,17 @@ static inline struct sock *skb_steal_sock(struct sk_buff *skb)
 static inline bool sk_fullsock(const struct sock *sk)
 {
 	return (1 << sk->sk_state) & ~(TCPF_TIME_WAIT | TCPF_NEW_SYN_RECV);
+}
+
+/* 4.9: no socket prefetch by sk_lookup BPF programs */
+static inline bool skb_sk_is_prefetched(struct sk_buff *skb)
+{
+	return false;
+}
+
+static inline bool sk_is_refcounted(struct sock *sk)
+{
+	return !sk_fullsock(sk) || !sock_flag(sk, SOCK_RCU_FREE);
 }
 
 /* This helper checks if a socket is a LISTEN or NEW_SYN_RECV

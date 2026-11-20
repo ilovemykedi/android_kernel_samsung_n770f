@@ -89,13 +89,12 @@
  * These locks are exported if CONFIG_PROVE_RCU so that accessors in
  * cgroup.h can use them for lockdep annotations.
  */
-#ifdef CONFIG_PROVE_RCU
 DEFINE_MUTEX(cgroup_mutex);
-DEFINE_SPINLOCK(css_set_lock);
 EXPORT_SYMBOL_GPL(cgroup_mutex);
+#ifdef CONFIG_PROVE_RCU
+DEFINE_SPINLOCK(css_set_lock);
 EXPORT_SYMBOL_GPL(css_set_lock);
 #else
-static DEFINE_MUTEX(cgroup_mutex);
 static DEFINE_SPINLOCK(css_set_lock);
 #endif
 
@@ -1652,6 +1651,8 @@ static int cgroup_show_options(struct seq_file *seq,
 		seq_puts(seq, ",noprefix");
 	if (root->flags & CGRP_ROOT_XATTR)
 		seq_puts(seq, ",xattr");
+	if (root->flags & CGRP_ROOT_CPUSET_V2_MODE)
+		seq_puts(seq, ",cpuset_v2_mode");
 
 	spin_lock(&release_agent_path_lock);
 	if (strlen(root->release_agent_path))
@@ -1714,6 +1715,10 @@ static int parse_cgroupfs_options(char *data, struct cgroup_sb_opts *opts)
 		}
 		if (!strcmp(token, "clone_children")) {
 			opts->cpuset_clone_children = true;
+			continue;
+		}
+		if (!strcmp(token, "cpuset_v2_mode")) {
+			opts->flags |= CGRP_ROOT_CPUSET_V2_MODE;
 			continue;
 		}
 		if (!strcmp(token, "xattr")) {
@@ -2019,6 +2024,9 @@ static int cgroup_setup_root(struct cgroup_root *root, u16 ss_mask)
 	ret = rebind_subsystems(root, ss_mask);
 	if (ret)
 		goto destroy_root;
+
+	ret = cgroup_bpf_inherit(root_cgrp);
+	WARN_ON_ONCE(ret);
 
 	trace_cgroup_setup_root(root);
 
@@ -5395,6 +5403,10 @@ static struct cgroup *cgroup_create(struct cgroup *parent)
 
 	cgrp->self.serial_nr = css_serial_nr_next++;
 
+	ret = cgroup_bpf_inherit(cgrp);
+	if (ret)
+		goto out_idr_free;
+
 	/* allocation complete, commit to creation */
 	list_add_tail_rcu(&cgrp->self.sibling, &cgroup_parent(cgrp)->self.children);
 	atomic_inc(&root->nr_cgrps);
@@ -5418,9 +5430,6 @@ static struct cgroup *cgroup_create(struct cgroup *parent)
 		if (ret)
 			goto out_idr_free;
 	}
-
-	if (parent)
-		cgroup_bpf_inherit(cgrp, parent);
 
 	cgroup_propagate_control(cgrp);
 
@@ -5646,6 +5655,8 @@ static int cgroup_destroy_locked(struct cgroup *cgrp)
 	kernfs_remove(cgrp->kn);
 
 	check_for_release(cgroup_parent(cgrp));
+
+	cgroup_bpf_offline(cgrp);
 
 	/* put the base reference */
 	percpu_ref_kill(&cgrp->self.refcnt);
@@ -6640,14 +6651,91 @@ static __init int cgroup_namespaces_init(void)
 subsys_initcall(cgroup_namespaces_init);
 
 #ifdef CONFIG_CGROUP_BPF
-int cgroup_bpf_update(struct cgroup *cgrp, struct bpf_prog *prog,
-		      enum bpf_attach_type type, bool overridable)
+int cgroup_bpf_attach(struct cgroup *cgrp, struct bpf_prog *prog,
+		      struct bpf_prog *replace_prog,
+		      struct bpf_cgroup_link *link, enum bpf_attach_type type,
+		      u32 flags)
 {
-	struct cgroup *parent = cgroup_parent(cgrp);
 	int ret;
 
 	mutex_lock(&cgroup_mutex);
-	ret = __cgroup_bpf_update(cgrp, parent, prog, type, overridable);
+	ret = __cgroup_bpf_attach(cgrp, prog, replace_prog, link, type, flags);
+	mutex_unlock(&cgroup_mutex);
+	return ret;
+}
+
+int cgroup_bpf_replace(struct bpf_link *link, struct bpf_prog *new_prog,
+		       struct bpf_prog *old_prog)
+{
+	struct bpf_cgroup_link *cg_link =
+		container_of(link, struct bpf_cgroup_link, link);
+	int ret;
+
+	mutex_lock(&cgroup_mutex);
+	if (!cg_link->cgroup) {
+		ret = -ENOLINK;
+		goto out_unlock;
+	}
+	if (old_prog && link->prog != old_prog) {
+		ret = -EPERM;
+		goto out_unlock;
+	}
+	ret = __cgroup_bpf_replace(cg_link->cgroup, cg_link, new_prog);
+out_unlock:
+	mutex_unlock(&cgroup_mutex);
+	return ret;
+}
+
+int cgroup_bpf_link_detach(struct bpf_cgroup_link *link)
+{
+	struct cgroup *cgrp;
+	int ret;
+
+	mutex_lock(&cgroup_mutex);
+	cgrp = link->cgroup;
+	if (!cgrp) {
+		ret = 0;
+		goto out_unlock;
+	}
+	ret = __cgroup_bpf_detach(cgrp, NULL, link, link->type);
+	if (!ret)
+		link->cgroup = NULL;
+out_unlock:
+	mutex_unlock(&cgroup_mutex);
+	if (!ret && cgrp)
+		cgroup_put(cgrp);
+	return ret;
+}
+
+u64 cgroup_bpf_link_get_cgroup_id(const struct bpf_cgroup_link *link)
+{
+	u64 cgroup_id = 0;
+
+	mutex_lock(&cgroup_mutex);
+	if (link->cgroup)
+		cgroup_id = cgroup_ino(link->cgroup);
+	mutex_unlock(&cgroup_mutex);
+
+	return cgroup_id;
+}
+
+int cgroup_bpf_detach(struct cgroup *cgrp, struct bpf_prog *prog,
+		      enum bpf_attach_type type)
+{
+	int ret;
+
+	mutex_lock(&cgroup_mutex);
+	ret = __cgroup_bpf_detach(cgrp, prog, NULL, type);
+	mutex_unlock(&cgroup_mutex);
+	return ret;
+}
+int cgroup_bpf_query(struct cgroup *cgrp, const union bpf_attr *attr,
+		     union bpf_attr __user *uattr)
+{
+	int ret;
+
+	mutex_lock(&cgroup_mutex);
+	ret = __cgroup_bpf_query(cgrp, attr, uattr);
 	mutex_unlock(&cgroup_mutex);
 	return ret;
 }

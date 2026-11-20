@@ -19,6 +19,7 @@ struct notifier_block;		/* in notifier.h */
 #define VM_UNINITIALIZED	0x00000020	/* vm_struct is not fully initialized */
 #define VM_NO_GUARD		0x00000040      /* don't add guard page */
 #define VM_KASAN		0x00000080      /* has allocated kasan shadow memory */
+#define VM_FLUSH_RESET_PERMS	0x00000100      /* accepted for BPF; not acted on in this tree */
 /* bits [20..32] reserved for arch specific ioremap internals */
 
 /*
@@ -70,6 +71,7 @@ static inline void vmalloc_init(void)
 extern void *vmalloc(unsigned long size);
 extern void *vzalloc(unsigned long size);
 extern void *vmalloc_user(unsigned long size);
+extern void *vmalloc_user_node_flags(unsigned long size, int node, gfp_t flags);
 extern void *vmalloc_node(unsigned long size, int node);
 extern void *vzalloc_node(unsigned long size, int node);
 extern void *vmalloc_exec(unsigned long size);
@@ -140,6 +142,13 @@ extern int map_kernel_range_noflush(unsigned long start, unsigned long size,
 				    pgprot_t prot, struct page **pages);
 extern void unmap_kernel_range_noflush(unsigned long addr, unsigned long size);
 extern void unmap_kernel_range(unsigned long addr, unsigned long size);
+static inline void set_vm_flush_reset_perms(void *addr)
+{
+	struct vm_struct *vm = find_vm_area(addr);
+
+	if (vm)
+		vm->flags |= VM_FLUSH_RESET_PERMS;
+}
 #else
 static inline int
 map_kernel_range_noflush(unsigned long start, unsigned long size,
@@ -153,6 +162,9 @@ unmap_kernel_range_noflush(unsigned long addr, unsigned long size)
 }
 static inline void
 unmap_kernel_range(unsigned long addr, unsigned long size)
+{
+}
+static inline void set_vm_flush_reset_perms(void *addr)
 {
 }
 #endif

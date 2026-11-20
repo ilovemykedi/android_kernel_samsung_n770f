@@ -276,6 +276,9 @@ struct tcp_sock {
 				 * receiver in Recovery. */
 	u32	prr_out;	/* Total number of pkts sent during Recovery. */
 	u32	delivered;	/* Total data packets delivered incl. rexmits */
+	u32	delivered_ce;	/* backported for BPF (not maintained, always 0) */
+	u32	dsack_dups;	/* backported for BPF (not maintained, always 0) */
+	u8	bpf_sock_ops_cb_flags;  /* BPF sock_ops callback flags */
 	u32	lost;		/* Total data packets lost incl. rexmits */
 	u32	app_limited;	/* limited until "delivered" reaches this val */
 	struct skb_mstamp first_tx_mstamp;  /* start of window send phase */

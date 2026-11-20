@@ -1,0 +1,120 @@
+/* include/net/xdp.h
+ *
+ * Copyright (c) 2017 Jesper Dangaard Brouer, Red Hat Inc.
+ * Released under terms in GPL version 2.  See COPYING.
+ */
+#ifndef __LINUX_NET_XDP_H__
+#define __LINUX_NET_XDP_H__
+
+#include <linux/skbuff.h>
+
+/**
+ * DOC: XDP RX-queue information
+ *
+ * The XDP RX-queue info (xdp_rxq_info) is associated with the driver
+ * level RX-ring queues.  It is information that is specific to how
+ * the driver have configured a given RX-ring queue.
+ *
+ * Each xdp_buff frame received in the driver carry a (pointer)
+ * reference to this xdp_rxq_info structure.  This provides the XDP
+ * data-path read-access to RX-info for both kernel and bpf-side
+ * (limited subset).
+ *
+ * For now, direct access is only safe while running in NAPI/softirq
+ * context.  Contents is read-mostly and must not be updated during
+ * driver NAPI/softirq poll.
+ *
+ * The driver usage API is a register and unregister API.
+ *
+ * The struct is not directly tied to the XDP prog.  A new XDP prog
+ * can be attached as long as it doesn't change the underlying
+ * RX-ring.  If the RX-ring does change significantly, the NIC driver
+ * naturally need to stop the RX-ring before purging and reallocating
+ * memory.  In that process the driver MUST call unregistor (which
+ * also apply for driver shutdown and unload).  The register API is
+ * also mandatory during RX-ring setup.
+ */
+
+struct xdp_rxq_info {
+	struct net_device *dev;
+	u32 queue_index;
+	u32 reg_state;
+	unsigned int napi_id;
+} ____cacheline_aligned; /* perf critical, avoid false-sharing */
+
+struct xdp_txq_info {
+	struct net_device *dev;
+};
+
+struct xdp_buff {
+	void *data;
+	void *data_end;
+	void *data_meta;
+	void *data_hard_start;
+	u32 frame_sz;
+	struct xdp_rxq_info *rxq;
+	struct xdp_txq_info *txq;
+};
+
+/* Packet description carried in the buffer headroom to a remote CPU. */
+struct xdp_pkt {
+	void *data;
+	u16 len;
+	u16 headroom;
+	u16 metasize;
+	struct net_device *dev_rx;
+};
+
+/* Reserve the skb_shared_info tailroom when growing an XDP packet. */
+static inline void *xdp_data_hard_end(const struct xdp_buff *xdp)
+{
+	return xdp->data_hard_start + xdp->frame_sz -
+		SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
+}
+
+static __always_inline void
+xdp_init_buff(struct xdp_buff *xdp, u32 frame_sz, struct xdp_rxq_info *rxq)
+{
+	xdp->frame_sz = frame_sz;
+	xdp->rxq = rxq;
+}
+
+static __always_inline void
+xdp_prepare_buff(struct xdp_buff *xdp, unsigned char *hard_start,
+		 int headroom, int data_len, const bool meta_valid)
+{
+	unsigned char *data = hard_start + headroom;
+
+	xdp->data_hard_start = hard_start;
+	xdp->data = data;
+	xdp->data_end = data + data_len;
+	xdp->data_meta = meta_valid ? data : data + 1;
+}
+
+int xdp_rxq_info_reg(struct xdp_rxq_info *xdp_rxq,
+		     struct net_device *dev, u32 queue_index);
+void xdp_rxq_info_unreg(struct xdp_rxq_info *xdp_rxq);
+void xdp_rxq_info_unused(struct xdp_rxq_info *xdp_rxq);
+bool xdp_rxq_info_is_reg(struct xdp_rxq_info *xdp_rxq);
+
+/* Drivers not supporting XDP metadata can use this helper, which
+ * rejects any room expansion for metadata as a result.
+ */
+static __always_inline void
+xdp_set_data_meta_invalid(struct xdp_buff *xdp)
+{
+	xdp->data_meta = xdp->data + 1;
+}
+
+static __always_inline bool
+xdp_data_meta_unsupported(const struct xdp_buff *xdp)
+{
+	return unlikely(xdp->data_meta > xdp->data);
+}
+
+static inline bool xdp_metalen_invalid(unsigned long metalen)
+{
+	return (metalen & (sizeof(__u32) - 1)) || (metalen > 32);
+}
+
+#endif /* __LINUX_NET_XDP_H__ */

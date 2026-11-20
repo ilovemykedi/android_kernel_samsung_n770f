@@ -1,4 +1,4 @@
-cmd_drivers/dma-buf/seqno-fence.o := ./buildtools/samsung-toolchain/clang/host/linux-x86/clang-r349610-jopp/bin/clang -Wp,-MD,drivers/dma-buf/.seqno-fence.o.d -nostdinc -isystem /root/kernel/n770f/buildtools/samsung-toolchain/clang/host/linux-x86/clang-r349610-jopp/lib64/clang/8.0.8/include -I./arch/arm64/include -I./arch/arm64/include/generated/uapi -I./arch/arm64/include/generated  -I./include -I./arch/arm64/include/uapi -I./include/uapi -I./include/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Qunused-arguments -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -fshort-wchar -Werror-implicit-function-declaration -Werror -std=gnu89 -Wno-sizeof-pointer-div --target=aarch64-linux-gnu --prefix=/root/kernel/n770f/buildtools/samsung-toolchain/gcc-cfp/gcc-cfp-jopp-only/aarch64-linux-android-4.9/bin/ --gcc-toolchain=/root/kernel/n770f/buildtools/samsung-toolchain/gcc-cfp/gcc-cfp-jopp-only/aarch64-linux-android-4.9 -no-integrated-as -Werror=unknown-warning-option -fno-PIE -mno-implicit-float -DCONFIG_BROKEN_GAS_INST=1 -fno-asynchronous-unwind-tables -fno-pic -Wno-asm-operand-widths -fno-delete-null-pointer-checks -Wno-address-of-packed-member -Os -Wframe-larger-than=4096 -fstack-protector-strong -Wno-format-invalid-specifier -Wno-gnu -Wno-duplicate-decl-specifier -Wno-tautological-compare -mno-global-merge -Wno-unused-const-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-merge-all-constants -fno-stack-check -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Werror=incompatible-pointer-types -Wno-initializer-overrides -Wno-unused-value -Wno-format -Wno-sign-compare -Wno-format-zero-length -Wno-uninitialized    -DKBUILD_BASENAME='"seqno_fence"'  -DKBUILD_MODNAME='"seqno_fence"' -c -o drivers/dma-buf/.tmp_seqno-fence.o drivers/dma-buf/seqno-fence.c
+cmd_drivers/dma-buf/seqno-fence.o := ./buildtools/samsung-toolchain/clang/host/linux-x86/clang-r349610-jopp/bin/clang -Wp,-MD,drivers/dma-buf/.seqno-fence.o.d -nostdinc -isystem /root/kernel/n770f/buildtools/samsung-toolchain/clang/host/linux-x86/clang-r349610-jopp/lib64/clang/8.0.8/include -I./arch/arm64/include -I./arch/arm64/include/generated/uapi -I./arch/arm64/include/generated  -I./include -I./arch/arm64/include/uapi -I./include/uapi -I./include/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Qunused-arguments -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -fshort-wchar -Werror-implicit-function-declaration -Werror -std=gnu89 -Wno-sizeof-pointer-div --target=aarch64-linux-gnu --prefix=/root/kernel/n770f/buildtools/samsung-toolchain/gcc-cfp/gcc-cfp-jopp-only/aarch64-linux-android-4.9/bin/ --gcc-toolchain=/root/kernel/n770f/buildtools/samsung-toolchain/gcc-cfp/gcc-cfp-jopp-only/aarch64-linux-android-4.9 -no-integrated-as -Werror=unknown-warning-option -fno-PIE -mno-implicit-float -Xclang -target-cpu -Xclang exynos-m3 -DCONFIG_BROKEN_GAS_INST=1 -fno-asynchronous-unwind-tables -fno-pic -Wno-asm-operand-widths -fno-delete-null-pointer-checks -Wno-sizeof-array-argument -Wno-address-of-packed-member -O2 -Wframe-larger-than=4096 -fstack-protector-strong -Wno-format-invalid-specifier -Wno-gnu -Wno-duplicate-decl-specifier -Wno-tautological-compare -mno-global-merge -Wno-unused-const-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-merge-all-constants -fno-stack-check -Werror=implicit-int -Werror=strict-prototypes -Wno-strict-prototypes -Werror=date-time -Werror=incompatible-pointer-types -Wno-initializer-overrides -Wno-unused-value -Wno-format -Wno-sign-compare -Wno-format-zero-length -Wno-uninitialized    -DKBUILD_BASENAME='"seqno_fence"'  -DKBUILD_MODNAME='"seqno_fence"' -c -o drivers/dma-buf/.tmp_seqno-fence.o drivers/dma-buf/seqno-fence.c
 
 source_drivers/dma-buf/seqno-fence.o := drivers/dma-buf/seqno-fence.c
 
@@ -77,6 +77,7 @@ deps_drivers/dma-buf/seqno-fence.o := \
     $(wildcard include/config/debug/atomic/sleep.h) \
     $(wildcard include/config/mmu.h) \
     $(wildcard include/config/prove/locking.h) \
+    $(wildcard include/config/arch/has/refcount.h) \
     $(wildcard include/config/panic/timeout.h) \
   /root/kernel/n770f/buildtools/samsung-toolchain/clang/host/linux-x86/clang-r349610-jopp/lib64/clang/8.0.8/include/stdarg.h \
   include/linux/linkage.h \
@@ -613,37 +614,11 @@ deps_drivers/dma-buf/seqno-fence.o := \
   include/linux/selinux.h \
     $(wildcard include/config/security/selinux.h) \
   include/uapi/linux/magic.h \
-  include/linux/cgroup-defs.h \
-    $(wildcard include/config/sock/cgroup/data.h) \
-  include/uapi/linux/limits.h \
-  include/linux/idr.h \
-  include/linux/percpu-refcount.h \
-  include/linux/percpu-rwsem.h \
-  include/linux/rcu_sync.h \
-  include/linux/bpf-cgroup.h \
-    $(wildcard include/config/cgroup/bpf.h) \
-  include/uapi/linux/bpf.h \
-  include/uapi/linux/bpf_common.h \
-  include/linux/psi_types.h \
-    $(wildcard include/config/psi.h) \
-  include/linux/kthread.h \
-  include/linux/kref.h \
-  include/linux/cgroup_subsys.h \
-    $(wildcard include/config/cgroup/cpuacct.h) \
-    $(wildcard include/config/cgroup/schedtune.h) \
-    $(wildcard include/config/blk/cgroup.h) \
-    $(wildcard include/config/cgroup/device.h) \
-    $(wildcard include/config/cgroup/freezer.h) \
-    $(wildcard include/config/cgroup/net/classid.h) \
-    $(wildcard include/config/cgroup/perf.h) \
-    $(wildcard include/config/cgroup/net/prio.h) \
-    $(wildcard include/config/cgroup/hugetlb.h) \
-    $(wildcard include/config/cgroup/pids.h) \
-    $(wildcard include/config/cgroup/debug.h) \
   include/linux/sec_debug_types.h \
   include/linux/seqno-fence.h \
   include/linux/dma-fence.h \
     $(wildcard include/config/dma/fence/trace.h) \
+  include/linux/kref.h \
   include/linux/dma-buf.h \
   include/linux/file.h \
   include/linux/scatterlist.h \
@@ -663,6 +638,7 @@ deps_drivers/dma-buf/seqno-fence.o := \
     $(wildcard include/config/parisc.h) \
     $(wildcard include/config/metag.h) \
     $(wildcard include/config/ia64.h) \
+    $(wildcard include/config/x86/intel/mpx.h) \
     $(wildcard include/config/shmem.h) \
     $(wildcard include/config/fs/dax.h) \
     $(wildcard include/config/debug/vm/rb.h) \
@@ -671,6 +647,7 @@ deps_drivers/dma-buf/seqno-fence.o := \
     $(wildcard include/config/hibernation.h) \
     $(wildcard include/config/hugetlbfs.h) \
   include/linux/range.h \
+  include/linux/percpu-refcount.h \
   include/linux/bit_spinlock.h \
   include/linux/shrinker.h \
   include/linux/page_ext.h \
@@ -710,6 +687,7 @@ deps_drivers/dma-buf/seqno-fence.o := \
     $(wildcard include/config/zram/lru/writeback.h) \
   arch/arm64/include/asm/io.h \
   include/linux/blk_types.h \
+    $(wildcard include/config/blk/cgroup.h) \
     $(wildcard include/config/blk/dev/integrity.h) \
     $(wildcard include/config/ddar.h) \
   include/linux/bvec.h \
@@ -753,6 +731,7 @@ deps_drivers/dma-buf/seqno-fence.o := \
   include/linux/sysfs.h \
   include/linux/kernfs.h \
     $(wildcard include/config/kernfs.h) \
+  include/linux/idr.h \
   include/linux/kobject_ns.h \
   include/linux/stat.h \
   arch/arm64/include/asm/stat.h \
@@ -800,9 +779,12 @@ deps_drivers/dma-buf/seqno-fence.o := \
   include/uapi/asm-generic/fcntl.h \
   include/uapi/linux/fiemap.h \
   include/linux/migrate_mode.h \
+  include/linux/percpu-rwsem.h \
+  include/linux/rcu_sync.h \
   include/linux/delayed_call.h \
   include/uapi/linux/fs.h \
     $(wildcard include/config/epm.h) \
+  include/uapi/linux/limits.h \
   include/uapi/linux/ioctl.h \
   arch/arm64/include/generated/asm/ioctl.h \
   include/asm-generic/ioctl.h \

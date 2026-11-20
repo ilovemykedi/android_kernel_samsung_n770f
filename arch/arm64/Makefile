@@ -60,6 +60,14 @@ ifeq ($(cc-name),clang)
 # This is a workaround for https://bugs.llvm.org/show_bug.cgi?id=30792.
 # TODO: revert when this is fixed in LLVM.
 KBUILD_CFLAGS	+= -mno-implicit-float
+# Schedule for Exynos 9810's big cores (Exynos M3). clang 8 ignores -mtune on
+# AArch64, and -mcpu would be forwarded to the old GNU assembler (which does
+# not know exynos-m3), so set the CPU model for code generation only. The
+# extra features it implies (crc/crypto) exist on the Cortex-A55 too and are
+# never emitted without intrinsics.
+ifeq ($(CONFIG_SOC_EXYNOS9810),y)
+KBUILD_CFLAGS	+= -Xclang -target-cpu -Xclang exynos-m3
+endif
 else
 KBUILD_CFLAGS	+= -mgeneral-regs-only
 endif

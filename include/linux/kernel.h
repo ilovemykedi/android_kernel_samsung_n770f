@@ -35,6 +35,7 @@
 #define S16_MAX		((s16)(U16_MAX>>1))
 #define S16_MIN		((s16)(-S16_MAX - 1))
 #define U32_MAX		((u32)~0U)
+#define U32_MIN		((u32)0)
 #define S32_MAX		((s32)(U32_MAX>>1))
 #define S32_MIN		((s32)(-S32_MAX - 1))
 #define U64_MAX		((u64)~0ULL)
@@ -76,6 +77,7 @@
 #define round_down(x, y) ((x) & ~__round_mask(x, y))
 
 #define FIELD_SIZEOF(t, f) (sizeof(((t*)0)->f))
+#define sizeof_field(TYPE, MEMBER) sizeof((((TYPE *)0)->MEMBER))
 #define DIV_ROUND_UP __KERNEL_DIV_ROUND_UP
 #define DIV_ROUND_UP_ULL(ll,d) \
 	({ unsigned long long _tmp = (ll)+(d)-1; do_div(_tmp, d); _tmp; })
@@ -186,8 +188,10 @@ extern int _cond_resched(void);
 #endif
 
 #ifdef CONFIG_DEBUG_ATOMIC_SLEEP
-  void ___might_sleep(const char *file, int line, int preempt_offset);
-  void __might_sleep(const char *file, int line, int preempt_offset);
+extern void ___might_sleep(const char *file, int line, int preempt_offset);
+extern void __might_sleep(const char *file, int line, int preempt_offset);
+extern void __cant_sleep(const char *file, int line, int preempt_offset);
+
 /**
  * might_sleep - annotation for functions that can sleep
  *
@@ -200,6 +204,13 @@ extern int _cond_resched(void);
  */
 # define might_sleep() \
 	do { __might_sleep(__FILE__, __LINE__, 0); might_resched(); } while (0)
+/**
+ * cant_sleep - annotation for functions that cannot sleep
+ *
+ * This macro prints a stack trace if it executes with preemption enabled.
+ */
+# define cant_sleep() \
+	do { __cant_sleep(__FILE__, __LINE__, 0); } while (0)
 # define sched_annotate_sleep()	(current->task_state_change = 0)
 #else
   static inline void ___might_sleep(const char *file, int line,
@@ -207,6 +218,7 @@ extern int _cond_resched(void);
   static inline void __might_sleep(const char *file, int line,
 				   int preempt_offset) { }
 # define might_sleep() do { might_resched(); } while (0)
+# define cant_sleep() do { } while (0)
 # define sched_annotate_sleep() do { } while (0)
 #endif
 
@@ -273,6 +285,13 @@ void print_oops_end_marker(void);
 extern int oops_may_print(void);
 void do_exit(long error_code) __noreturn;
 void complete_and_exit(struct completion *, long) __noreturn;
+
+#ifdef CONFIG_ARCH_HAS_REFCOUNT
+void refcount_error_report(struct pt_regs *regs, const char *err);
+#else
+static inline void refcount_error_report(struct pt_regs *regs, const char *err)
+{ }
+#endif
 
 /* Internal, do not use. */
 int __must_check _kstrtoul(const char *s, unsigned int base, unsigned long *res);
@@ -839,6 +858,13 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
  */
 #define swap(a, b) \
 	do { typeof(a) __tmp = (a); (a) = (b); (b) = __tmp; } while (0)
+
+/* This counts to 12. Any more, it will return 13th argument. */
+#define __COUNT_ARGS(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _n, X...) _n
+#define COUNT_ARGS(X...) __COUNT_ARGS(, ##X, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
+
+#define __CONCAT(a, b) a ## b
+#define CONCATENATE(a, b) __CONCAT(a, b)
 
 /**
  * container_of - cast a member of a structure out to the containing structure

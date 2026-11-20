@@ -8540,3 +8540,34 @@ out:
 }
 
 subsys_initcall(net_dev_init);
+
+/*
+ * 4.9 + backported BPF: link-based XDP attachment is not supported (drivers
+ * here use the older ndo_xdp interface).
+ */
+int bpf_xdp_link_attach(const union bpf_attr *attr, struct bpf_prog *prog)
+{
+	return -EOPNOTSUPP;
+}
+
+u32 dev_xdp_prog_id(struct net_device *dev, enum bpf_xdp_mode mode)
+{
+	return 0;
+}
+
+/* No generic (skb-mode) XDP in this tree; used only by devmap's generic path */
+u32 bpf_prog_run_generic_xdp(struct sk_buff *skb, struct xdp_buff *xdp,
+			     struct bpf_prog *xdp_prog)
+{
+	return XDP_PASS;
+}
+
+void generic_xdp_tx(struct sk_buff *skb, struct bpf_prog *xdp_prog)
+{
+	kfree_skb(skb);
+}
+
+int dev_forward_skb_nomtu(struct net_device *dev, struct sk_buff *skb)
+{
+	return dev_forward_skb(dev, skb);
+}

@@ -71,6 +71,7 @@
 #include <linux/errno.h>
 #include <linux/types.h>
 #include <linux/socket.h>
+#include <linux/bpf-cgroup.h>
 #include <linux/in.h>
 #include <linux/kernel.h>
 #include <linux/kmod.h>
@@ -422,6 +423,9 @@ int inet_release(struct socket *sock)
 	if (sk) {
 		long timeout;
 
+		if (!sk->sk_kern_sock)
+			BPF_CGROUP_RUN_PROG_INET_SOCK_RELEASE(sk);
+
 		/* Applications forget to leave groups before exiting */
 		ip_mc_drop_socket(sk);
 
@@ -452,6 +456,7 @@ int inet_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len)
 	unsigned short snum;
 	int chk_addr_ret;
 	u32 tb_id = RT_TABLE_LOCAL;
+	u32 flags = 0;
 	int err;
 
 	/* If the socket has its own bind function then use it. (RAW) */
@@ -462,6 +467,15 @@ int inet_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len)
 	err = -EINVAL;
 	if (addr_len < sizeof(struct sockaddr_in))
 		goto out;
+
+	/* BPF prog is run before any checks are done so that if the prog
+	 * changes context in a wrong way it will be caught.
+	 */
+	err = BPF_CGROUP_RUN_PROG_INET_BIND_LOCK(sk, uaddr,
+						 BPF_CGROUP_INET4_BIND, &flags);
+	if (err)
+		goto out;
+	err = -EINVAL;
 
 	if (addr->sin_family != AF_INET) {
 		/* Compatibility games : accept AF_UNSPEC (mapped to AF_INET)
@@ -495,6 +509,7 @@ int inet_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len)
 	snum = ntohs(addr->sin_port);
 	err = -EACCES;
 	if (snum && snum < PROT_SOCK &&
+	    !(flags & BIND_NO_CAP_NET_BIND_SERVICE) &&
 	    !ns_capable(net->user_ns, CAP_NET_BIND_SERVICE))
 		goto out;
 
@@ -540,6 +555,31 @@ out:
 }
 EXPORT_SYMBOL(inet_bind);
 
+/* Backported cgroup BPF connect hooks (upstream proto->pre_connect) */
+int inet_bpf_pre_connect(struct sock *sk, struct sockaddr *uaddr,
+			 int addr_len, bool locked)
+{
+	if (sk->sk_protocol != IPPROTO_TCP && sk->sk_protocol != IPPROTO_UDP)
+		return 0;
+
+	if (sk->sk_family == AF_INET) {
+		if (addr_len < sizeof(struct sockaddr_in))
+			return -EINVAL;
+		return locked ? BPF_CGROUP_RUN_PROG_INET4_CONNECT(sk, uaddr) :
+				BPF_CGROUP_RUN_PROG_INET4_CONNECT_LOCK(sk, uaddr);
+	}
+#if IS_ENABLED(CONFIG_IPV6)
+	if (sk->sk_family == AF_INET6) {
+		if (addr_len < SIN6_LEN_RFC2133)
+			return -EINVAL;
+		return locked ? BPF_CGROUP_RUN_PROG_INET6_CONNECT(sk, uaddr) :
+				BPF_CGROUP_RUN_PROG_INET6_CONNECT_LOCK(sk, uaddr);
+	}
+#endif
+	return 0;
+}
+EXPORT_SYMBOL(inet_bpf_pre_connect);
+
 int inet_dgram_connect(struct socket *sock, struct sockaddr *uaddr,
 		       int addr_len, int flags)
 {
@@ -549,6 +589,13 @@ int inet_dgram_connect(struct socket *sock, struct sockaddr *uaddr,
 		return -EINVAL;
 	if (uaddr->sa_family == AF_UNSPEC)
 		return sk->sk_prot->disconnect(sk, flags);
+
+	if (cgroup_bpf_enabled) {
+		int err = inet_bpf_pre_connect(sk, uaddr, addr_len, false);
+
+		if (err)
+			return err;
+	}
 
 	if (!inet_sk(sk)->inet_num && inet_autobind(sk))
 		return -EAGAIN;
@@ -629,6 +676,12 @@ int __inet_stream_connect(struct socket *sock, struct sockaddr *uaddr,
 		err = -EISCONN;
 		if (sk->sk_state != TCP_CLOSE)
 			goto out;
+
+		if (cgroup_bpf_enabled) {
+			err = inet_bpf_pre_connect(sk, uaddr, addr_len, true);
+			if (err)
+				goto out;
+		}
 
 		err = sk->sk_prot->connect(sk, uaddr, addr_len);
 		if (err < 0)

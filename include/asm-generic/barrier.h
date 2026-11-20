@@ -231,6 +231,24 @@ do {									\
  * Due to C lacking lambda expressions we load the value of *ptr into a
  * pre-named variable @VAL to be used in @cond.
  */
+/*
+ * smp_cond_load_relaxed() - (Spin) wait for cond with no ordering guarantees
+ * (backported for the 4.19 BPF subsystem)
+ */
+#ifndef smp_cond_load_relaxed
+#define smp_cond_load_relaxed(ptr, cond_expr) ({		\
+	typeof(ptr) __PTR = (ptr);				\
+	typeof(*ptr) VAL;					\
+	for (;;) {						\
+		VAL = READ_ONCE(*__PTR);			\
+		if (cond_expr)					\
+			break;					\
+		cpu_relax();					\
+	}							\
+	VAL;							\
+})
+#endif
+
 #ifndef smp_cond_load_acquire
 #define smp_cond_load_acquire(ptr, cond_expr) ({		\
 	typeof(ptr) __PTR = (ptr);				\

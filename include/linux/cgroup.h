@@ -416,8 +416,8 @@ static inline void cgroup_put(struct cgroup *cgrp)
  * The caller can also specify additional allowed conditions via @__c, such
  * as locks used during the cgroup_subsys::attach() methods.
  */
-#ifdef CONFIG_PROVE_RCU
 extern struct mutex cgroup_mutex;
+#ifdef CONFIG_PROVE_RCU
 extern spinlock_t css_set_lock;
 #define task_css_set_check(task, __c)					\
 	rcu_dereference_check((task)->cgroups,				\
@@ -545,6 +545,34 @@ static inline bool cgroup_is_descendant(struct cgroup *cgrp,
 	if (cgrp->root != ancestor->root || cgrp->level < ancestor->level)
 		return false;
 	return cgrp->ancestor_ids[ancestor->level] == ancestor->id;
+}
+
+/**
+ * cgroup_ancestor - find ancestor of cgroup at @ancestor_level, or NULL
+ */
+static inline struct cgroup *cgroup_ancestor(struct cgroup *cgrp,
+					     int ancestor_level)
+{
+	struct cgroup *ptr;
+
+	if (cgrp->level < ancestor_level)
+		return NULL;
+
+	for (ptr = cgrp;
+	     ptr && ptr->level > ancestor_level;
+	     ptr = cgroup_parent(ptr))
+		;
+
+	if (ptr && ptr->level == ancestor_level)
+		return ptr;
+
+	return NULL;
+}
+
+/* 4.9 kernfs has no 64-bit node id; the inode number is the cgroup id */
+static inline u64 cgroup_id(const struct cgroup *cgrp)
+{
+	return cgrp->kn->ino;
 }
 
 /**

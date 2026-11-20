@@ -46,6 +46,21 @@ static bool init_net_initialized;
 
 static unsigned int max_gen_ptrs = INITIAL_NET_GEN_PTRS;
 
+static atomic64_t net_cookie_gen;
+
+u64 net_gen_cookie(struct net *net)
+{
+	while (1) {
+		u64 res = atomic64_read(&net->net_cookie);
+
+		if (res)
+			return res;
+		res = atomic64_inc_return(&net_cookie_gen);
+		atomic64_cmpxchg(&net->net_cookie, 0, res);
+	}
+}
+EXPORT_SYMBOL(net_gen_cookie);
+
 static struct net_generic *net_alloc_generic(void)
 {
 	struct net_generic *ng;

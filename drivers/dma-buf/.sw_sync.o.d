@@ -150,20 +150,15 @@ sw_sync.o: drivers/dma-buf/sw_sync.c include/linux/kconfig.h \
   include/linux/task_io_accounting.h include/linux/latencytop.h \
   include/linux/cred.h include/linux/key.h include/linux/assoc_array.h \
   include/linux/selinux.h include/linux/gfp.h include/uapi/linux/magic.h \
-  include/linux/cgroup-defs.h include/uapi/linux/limits.h \
-  include/linux/idr.h include/linux/percpu-refcount.h \
+  include/linux/sec_debug_types.h include/uapi/linux/stat.h \
+  include/linux/list_lru.h include/linux/shrinker.h \
+  include/linux/radix-tree.h include/linux/semaphore.h \
+  include/linux/fcntl.h include/uapi/linux/fcntl.h \
+  arch/arm64/include/uapi/asm/fcntl.h include/uapi/asm-generic/fcntl.h \
+  include/uapi/linux/fiemap.h include/linux/migrate_mode.h \
   include/linux/percpu-rwsem.h include/linux/rcu_sync.h \
-  include/linux/bpf-cgroup.h include/uapi/linux/bpf.h \
-  include/uapi/linux/bpf_common.h include/linux/psi_types.h \
-  include/linux/kthread.h include/linux/kref.h \
-  include/linux/cgroup_subsys.h include/linux/sec_debug_types.h \
-  include/uapi/linux/stat.h include/linux/list_lru.h \
-  include/linux/shrinker.h include/linux/radix-tree.h \
-  include/linux/semaphore.h include/linux/fcntl.h \
-  include/uapi/linux/fcntl.h arch/arm64/include/uapi/asm/fcntl.h \
-  include/uapi/asm-generic/fcntl.h include/uapi/linux/fiemap.h \
-  include/linux/migrate_mode.h include/linux/delayed_call.h \
-  include/uapi/linux/fs.h include/uapi/linux/ioctl.h \
+  include/linux/delayed_call.h include/uapi/linux/fs.h \
+  include/uapi/linux/limits.h include/uapi/linux/ioctl.h \
   arch/arm64/include/generated/asm/ioctl.h include/asm-generic/ioctl.h \
   include/uapi/asm-generic/ioctl.h include/linux/quota.h \
   include/linux/percpu_counter.h include/uapi/linux/dqblk_xfs.h \
@@ -177,15 +172,17 @@ sw_sync.o: drivers/dma-buf/sw_sync.c include/linux/kconfig.h \
   arch/arm64/include/asm/boot.h include/asm-generic/fixmap.h \
   include/asm-generic/pgtable.h arch/arm64/include/asm/compiler.h \
   include/linux/slab.h include/linux/kmemleak.h include/linux/kasan.h \
-  include/linux/sync_file.h include/linux/dma-fence.h \
-  include/linux/dma-fence-array.h drivers/dma-buf/sync_debug.h \
-  include/uapi/linux/sync_file.h drivers/dma-buf/sync_trace.h \
-  include/linux/tracepoint.h include/linux/tracepoint-defs.h \
-  include/linux/static_key.h include/trace/define_trace.h \
+  include/linux/sync_file.h include/linux/kref.h \
+  include/linux/dma-fence.h include/linux/dma-fence-array.h \
+  drivers/dma-buf/sync_debug.h include/uapi/linux/sync_file.h \
+  drivers/dma-buf/sync_trace.h include/linux/tracepoint.h \
+  include/linux/tracepoint-defs.h include/linux/static_key.h \
+  include/trace/define_trace.h \
   include/trace/../../drivers/dma-buf/sync_trace.h \
   include/trace/trace_events.h include/linux/trace_events.h \
   include/linux/ring_buffer.h include/linux/kmemcheck.h \
-  include/linux/mm.h include/linux/range.h include/linux/page_ext.h \
+  include/linux/mm.h include/linux/range.h \
+  include/linux/percpu-refcount.h include/linux/page_ext.h \
   include/linux/stacktrace.h include/linux/stackdepot.h \
   include/linux/page_ref.h include/linux/page-flags.h \
   include/linux/huge_mm.h include/linux/vmstat.h \
@@ -218,15 +215,28 @@ sw_sync.o: drivers/dma-buf/sw_sync.c include/linux/kconfig.h \
   include/uapi/linux/libc-compat.h include/uapi/linux/hdlc/ioctl.h \
   include/uapi/linux/aio_abi.h include/linux/cpu.h include/linux/node.h \
   include/linux/device.h include/linux/ioport.h include/linux/kobject.h \
-  include/linux/sysfs.h include/linux/kernfs.h \
+  include/linux/sysfs.h include/linux/kernfs.h include/linux/idr.h \
   include/linux/kobject_ns.h include/linux/klist.h \
   include/linux/pinctrl/devinfo.h include/linux/pinctrl/consumer.h \
   include/linux/pinctrl/pinctrl-state.h include/linux/pm.h \
   include/linux/ratelimit.h arch/arm64/include/asm/device.h \
   include/linux/pm_wakeup.h include/linux/cpuhotplug.h \
   include/linux/irq_work.h arch/arm64/include/asm/irq_work.h \
-  include/linux/jump_label_ratelimit.h include/linux/perf_regs.h \
-  arch/arm64/include/uapi/asm/perf_regs.h include/linux/cgroup.h \
-  include/uapi/linux/cgroupstats.h include/uapi/linux/taskstats.h \
-  include/linux/user_namespace.h include/linux/security.h \
-  include/trace/perf.h
+  include/linux/security.h include/linux/jump_label_ratelimit.h \
+  include/linux/perf_regs.h arch/arm64/include/uapi/asm/perf_regs.h \
+  include/linux/cgroup.h include/uapi/linux/cgroupstats.h \
+  include/uapi/linux/taskstats.h include/linux/user_namespace.h \
+  include/linux/cgroup-defs.h include/linux/bpf-cgroup.h \
+  include/linux/bpf.h include/uapi/linux/bpf.h \
+  include/uapi/linux/bpf_common.h include/linux/rbtree_latch.h \
+  include/linux/module.h include/linux/kmod.h include/linux/elf.h \
+  arch/arm64/include/asm/elf.h arch/arm64/include/generated/asm/user.h \
+  include/asm-generic/user.h include/uapi/linux/elf.h \
+  include/uapi/linux/elf-em.h include/linux/moduleparam.h \
+  include/linux/extable.h include/linux/cfi.h \
+  arch/arm64/include/asm/module.h include/asm-generic/module.h \
+  include/linux/refcount.h include/linux/u64_stats_sync.h \
+  include/linux/bpfptr.h include/linux/bpf_types.h \
+  include/linux/psi_types.h include/linux/kthread.h \
+  include/linux/cgroup_subsys.h include/trace/perf.h \
+  include/trace/bpf_probe.h

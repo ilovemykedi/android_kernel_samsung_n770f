@@ -226,4 +226,25 @@ static inline void *skb_flow_dissector_target(struct flow_dissector *flow_dissec
 	return ((char *)target_container) + flow_dissector->offset[key_id];
 }
 
+struct bpf_flow_keys;
+struct bpf_prog;
+struct net;
+
+struct bpf_flow_dissector {
+	struct bpf_flow_keys	*flow_keys;
+	const struct sk_buff	*skb;
+	const void		*data;
+	const void		*data_end;
+};
+
+/* Backported for the BPF subsystem; the dissector itself does not run BPF
+ * flow-dissector programs in this tree.
+ */
+bool bpf_flow_dissect(struct bpf_prog *prog, struct bpf_flow_dissector *ctx,
+		      __be16 proto, int nhoff, int hlen, unsigned int flags);
+#ifdef CONFIG_BPF_SYSCALL
+int flow_dissector_bpf_prog_attach_check(struct net *net,
+					 struct bpf_prog *prog);
+#endif
+
 #endif
