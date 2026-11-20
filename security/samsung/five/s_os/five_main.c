@@ -39,7 +39,6 @@
 #include "five_porting.h"
 #include "five_cache.h"
 #include "five_dmverity.h"
-#include "five_dsms.h"
 #include "five_testing.h"
 
 /* crash_dump in Android 12 uses this request even if Kernel doesn't
@@ -756,8 +755,6 @@ int __init init_five(void)
 	error = init_fs();
 	if (error)
 		return error;
-
-	five_dsms_init("1", 0);
 
 	error = five_init_dmverity();
 

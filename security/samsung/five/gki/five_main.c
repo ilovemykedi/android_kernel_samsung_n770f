@@ -40,7 +40,6 @@
 #include "five_porting.h"
 #include "five_cache.h"
 #include "five_dmverity.h"
-#include "five_dsms.h"
 #include "five_tint_dev.h"
 
 static const bool unlink_on_error;	// false
@@ -924,8 +923,6 @@ static int __init init_five(void)
 	error = init_fs();
 	if (error)
 		return error;
-
-	five_dsms_init("1", 0);
 
 	error = five_init_dmverity();
 	if (error)
