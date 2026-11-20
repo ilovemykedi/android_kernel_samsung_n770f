@@ -93,3 +93,14 @@ config SECURITY_SELINUX_CHECKREQPROT_VALUE
 	  via /selinux/checkreqprot if authorized by policy.
 
 	  If you are unsure how to answer this question, answer 0.
+
+config SECURITY_SELINUX_FORCE_PERMISSIVE
+	bool "Force SELinux permissive (testing only)"
+	depends on SECURITY_SELINUX_DEVELOP && !ALWAYS_ENFORCE
+	default n
+	help
+	  Keep SELinux in permissive mode: writes of 1 to
+	  /sys/fs/selinux/enforce and enforcing=1 on the command line are
+	  ignored, so denials are logged but not enforced. Intended for
+	  bringing up ports (e.g. other ROMs on this device). Insecure;
+	  never enable for daily-driver builds.
