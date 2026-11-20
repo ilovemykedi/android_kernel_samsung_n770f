@@ -23,10 +23,6 @@
 #include "fimc-is-interface-vra.h"
 #include "../fimc-is-device-ischain.h"
 #include "fimc-is-vender.h"
-#ifdef CONFIG_UH_RKP
-#include <linux/uh.h>
-#include <linux/rkp.h>
-#endif
 
 struct fimc_is_lib_support gPtr_lib_support;
 struct mutex gPtr_bin_load_ctrl;
@@ -2250,19 +2246,12 @@ int fimc_is_load_ddk_bin(int loadType)
 #else
 	size_t bin_size = DDK_LIB_SIZE;
 #endif
-	/*
-#ifdef CONFIG_UH_RKP
-	unsigned int rkp_result = 0;
-#endif
-	*/
 
-#ifndef CONFIG_UH_RKP
 	ulong lib_vra = VRA_LIB_ADDR;
 	struct fimc_is_memory_attribute memory_attribute[] = {
 		{__pgprot(PTE_RDONLY), PFN_UP(LIB_VRA_CODE_SIZE), lib_vra},
 		{__pgprot(PTE_RDONLY), PFN_UP(LIB_ISP_CODE_SIZE), lib_isp}
 	};
-#endif
 
 #ifdef USE_ONE_BINARY
 	lib_addr = LIB_START;
@@ -2272,7 +2261,6 @@ int fimc_is_load_ddk_bin(int loadType)
 	snprintf(bin_type, sizeof(bin_type), "ISP");
 #endif
 
-#ifndef CONFIG_UH_RKP
 	/* load DDK library */
 	ret = fimc_is_memory_attribute_nxrw(&memory_attribute[INDEX_ISP_BIN]);
 	if (ret) {
@@ -2286,7 +2274,6 @@ int fimc_is_load_ddk_bin(int loadType)
 		err_lib("failed to change into NX memory attribute (%d)", ret);
 		return ret;
 	}
-#endif
 #endif
 
 	setup_binary_loader(&bin, 3, -EAGAIN, NULL, NULL);
@@ -2307,16 +2294,8 @@ int fimc_is_load_ddk_bin(int loadType)
 			bin_type,
 			was_loaded_by(&bin) ? "built-in" : "user-provided");
 		if (bin.size <= bin_size) {
-#ifdef CONFIG_UH_RKP
-			uh_call(UH_APP_RKP, RKP_FIMC_VERIFY, 0, 0, 1, 0);
-#endif
 			memcpy((void *)lib_addr, bin.data, bin.size);
 			__flush_dcache_area((void *)lib_addr, bin.size);
-#ifdef CONFIG_UH_RKP
-			uh_call(UH_APP_RKP, RKP_FIMC_VERIFY,
-				(u64)page_to_phys(vmalloc_to_page((void *)lib_addr)),
-				(u64)bin.size, 1, 0);
-#endif
 		} else {
 			err_lib("DDK bin size is bigger than memory area. %zd[%zd]",
 				bin.size, bin_size);
@@ -2353,7 +2332,6 @@ int fimc_is_load_ddk_bin(int loadType)
 						bin.data, bin.size);
 	release_binary(&bin);
 
-#ifndef CONFIG_UH_RKP
 	ret = fimc_is_memory_attribute_rox(&memory_attribute[INDEX_ISP_BIN]);
 	if (ret) {
 		err_lib("failed to change into EX memory attribute (%d)", ret);
@@ -2366,7 +2344,6 @@ int fimc_is_load_ddk_bin(int loadType)
 		err_lib("failed to change into EX memory attribute (%d)", ret);
 		return ret;
 	}
-#endif
 #endif
 
 	gPtr_lib_support.log_ptr = 0;
@@ -2399,21 +2376,17 @@ int fimc_is_load_vra_bin(int loadType)
 	/* fixup the memory attribute for every region */
 	ulong lib_isp = DDK_LIB_ADDR;
 	ulong lib_vra = VRA_LIB_ADDR;
-#ifndef CONFIG_UH_RKP
 	struct fimc_is_memory_attribute memory_attribute[] = {
 		{__pgprot(PTE_RDONLY), PFN_UP(LIB_VRA_CODE_SIZE), lib_vra},
 		{__pgprot(PTE_RDONLY), PFN_UP(LIB_ISP_CODE_SIZE), lib_isp}
 	};
-#endif
 
 	/* load VRA library */
-#ifndef CONFIG_UH_RKP
 	ret = fimc_is_memory_attribute_nxrw(&memory_attribute[INDEX_VRA_BIN]);
 	if (ret) {
 		err_lib("failed to change into NX memory attribute (%d)", ret);
 		return ret;
 	}
-#endif
 
 	setup_binary_loader(&bin, 3, -EAGAIN, NULL, NULL);
 	ret = request_binary(&bin, FIMC_IS_ISP_LIB_SDCARD_PATH,
@@ -2437,13 +2410,11 @@ int fimc_is_load_vra_bin(int loadType)
 
 	release_binary(&bin);
 
-#ifndef CONFIG_UH_RKP
 	ret = fimc_is_memory_attribute_rox(&memory_attribute[INDEX_VRA_BIN]);
 	if (ret) {
 		err_lib("failed to change into EX memory attribute (%d)", ret);
 		return ret;
 	}
-#endif
 #endif
 
 	fimc_is_lib_vra_os_funcs();
@@ -2466,13 +2437,7 @@ int fimc_is_load_rta_bin(int loadType)
 
 	os_system_func_t os_system_funcs[100];
 	ulong lib_rta = RTA_LIB_ADDR;
-	/*
-#ifdef CONFIG_UH_RKP
-	unsigned int rkp_result = 0;
-#endif
-	*/
 
-#ifndef CONFIG_UH_RKP
 	struct fimc_is_memory_attribute rta_memory_attribute = {
 		__pgprot(PTE_RDONLY), PFN_UP(LIB_RTA_CODE_SIZE), lib_rta};
 
@@ -2482,7 +2447,6 @@ int fimc_is_load_rta_bin(int loadType)
 		err_lib("failed to change into NX memory attribute (%d)", ret);
 		return ret;
 	}
-#endif
 
 	setup_binary_loader(&bin, 3, -EAGAIN, NULL, NULL);
 #ifdef CAMERA_MODULE_DUALIZE
@@ -2501,16 +2465,8 @@ int fimc_is_load_rta_bin(int loadType)
 		info_lib("binary info[RTA] - type: C/D, from: %s\n",
 			was_loaded_by(&bin) ? "built-in" : "user-provided");
 		if (bin.size <= RTA_LIB_SIZE) {
-#ifdef CONFIG_UH_RKP
-			uh_call(UH_APP_RKP, RKP_FIMC_VERIFY, 0, 0, 2, 0);
-#endif
 			memcpy((void *)lib_rta, bin.data, bin.size);
 			__flush_dcache_area((void *)lib_rta, bin.size);
-#ifdef CONFIG_UH_RKP
-			uh_call(UH_APP_RKP, RKP_FIMC_VERIFY,
-				(u64)page_to_phys(vmalloc_to_page((void *)lib_rta)),
-				(u64)bin.size, 2, RTA_CODE_AREA_SIZE);
-#endif
 		} else {
 			err_lib("RTA bin size is bigger than memory area. %d[%d]",
 				(unsigned int)bin.size, (unsigned int)RTA_LIB_SIZE);
@@ -2538,13 +2494,11 @@ int fimc_is_load_rta_bin(int loadType)
 						bin.data, bin.size);
 	release_binary(&bin);
 
-#ifndef CONFIG_UH_RKP
 	ret = fimc_is_memory_attribute_rox(&rta_memory_attribute);
 	if (ret) {
 		err_lib("failed to change into EX memory attribute (%d)", ret);
 		return ret;
 	}
-#endif
 
 	set_os_system_funcs_for_rta(os_system_funcs);
 	/* call start_up function for RTA binary */
