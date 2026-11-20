@@ -22,6 +22,7 @@
  * formats.
  */
 
+#include <linux/boot_checkpoint.h>
 #include <linux/slab.h>
 #include <linux/file.h>
 #include <linux/fdtable.h>
@@ -1614,7 +1615,15 @@ int search_binary_handler(struct linux_binprm *bprm)
 	if (bprm->recursion_depth > 5)
 		return -ELOOP;
 
+#ifdef CONFIG_EXYNOS_BOOT_CHECKPOINTS
+	if (task_pid_nr(current) == 1)
+		boot_checkpoint(31, "PID1 BINARY %s", bprm->filename);
+#endif
 	retval = security_bprm_check(bprm);
+#ifdef CONFIG_EXYNOS_BOOT_CHECKPOINTS
+	if (task_pid_nr(current) == 1)
+		boot_checkpoint(32, "PID1 BPRM SECURITY RETURN %d", retval);
+#endif
 	if (retval)
 		return retval;
 
@@ -1626,7 +1635,15 @@ int search_binary_handler(struct linux_binprm *bprm)
 			continue;
 		read_unlock(&binfmt_lock);
 		bprm->recursion_depth++;
+#ifdef CONFIG_EXYNOS_BOOT_CHECKPOINTS
+		if (task_pid_nr(current) == 1)
+			boot_checkpoint(33, "PID1 LOADER ENTER %pF", fmt->load_binary);
+#endif
 		retval = fmt->load_binary(bprm);
+#ifdef CONFIG_EXYNOS_BOOT_CHECKPOINTS
+		if (task_pid_nr(current) == 1)
+			boot_checkpoint(34, "PID1 LOADER RETURN %d", retval);
+#endif
 		read_lock(&binfmt_lock);
 		put_binfmt(fmt);
 		bprm->recursion_depth--;

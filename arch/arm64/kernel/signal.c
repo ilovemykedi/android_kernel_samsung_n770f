@@ -17,6 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/boot_checkpoint.h>
 #include <linux/compat.h>
 #include <linux/errno.h>
 #include <linux/signal.h>
@@ -411,6 +412,15 @@ asmlinkage void do_notify_resume(struct pt_regs *regs,
 	trace_hardirqs_off();
 
 	do {
+#ifdef CONFIG_EXYNOS_BOOT_CHECKPOINTS
+		if (task_pid_nr(current) == 1) {
+			static unsigned long visits;
+			unsigned long n = ++visits;
+
+			if (n < 8 || !(n & (n - 1)))
+				boot_checkpoint(50, "PID1 RESUME FLAGS %x COUNT %lu", thread_flags, n);
+		}
+#endif
 		/* Check valid user FS if needed */
 		addr_limit_user_check();
 

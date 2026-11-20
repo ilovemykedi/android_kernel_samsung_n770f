@@ -11,6 +11,7 @@
 
 #define DEBUG		/* Enable initcall_debug */
 
+#include <linux/boot_checkpoint.h>
 #include <linux/types.h>
 #include <linux/module.h>
 #include <linux/proc_fs.h>
@@ -571,7 +572,9 @@ asmlinkage __visible void __init start_kernel(void)
 	boot_cpu_init();
 	page_address_init();
 	pr_notice("%s", linux_banner);
+	boot_checkpoint(2, "BANNER OK - ENTER SETUP_ARCH");
 	setup_arch(&command_line);
+	boot_checkpoint(11, "SETUP_ARCH RETURNED");
 	/*
 	 * Set up the the initial canary and entropy after arch
 	 * and after adding latent and command line entropy.
@@ -628,13 +631,16 @@ asmlinkage __visible void __init start_kernel(void)
 	vfs_caches_init_early();
 	sort_main_extable();
 	trap_init();
+	boot_checkpoint(12, "TRAPS OK - ENTER MM_INIT");
 	mm_init();
+	boot_checkpoint(13, "MM_INIT OK");
 	/*
 	 * Set up the scheduler prior starting any interrupts (such as the
 	 * timer interrupt). Full topology setup happens at smp_init()
 	 * time - but meanwhile we still have a functioning scheduler.
 	 */
 	sched_init();
+	boot_checkpoint(14, "SCHED INIT OK");
 	/*
 	 * Disable preemption - early bootup scheduling is extremely
 	 * fragile until we cpu_idle() for the first time.
@@ -662,13 +668,16 @@ asmlinkage __visible void __init start_kernel(void)
 	/* init some links before init_ISA_irqs() */
 	early_irq_init();
 	init_IRQ();
+	boot_checkpoint(15, "IRQ INIT OK");
 	tick_init();
 	rcu_init_nohz();
 	init_timers();
 	hrtimers_init();
+	boot_checkpoint(16, "HRTIMERS OK");
 	softirq_init();
 	timekeeping_init();
 	time_init();
+	boot_checkpoint(17, "TIME / MCT INIT OK");
 	sched_clock_postinit();
 	printk_nmi_init();
 	perf_event_init();
@@ -760,6 +769,7 @@ asmlinkage __visible void __init start_kernel(void)
 	ftrace_init();
 
 	/* Do the rest non-__init'ed, we're now alive */
+	boot_checkpoint(18, "ENTER REST_INIT");
 	rest_init();
 }
 
@@ -880,6 +890,7 @@ int __init_or_module do_one_initcall(initcall_t fn)
 
 	msgbuf[0] = 0;
 
+	boot_checkpoint(35, "INITCALL ENTER %pF", fn);
 	if (preempt_count() != count) {
 		sprintf(msgbuf, "preemption imbalance ");
 		preempt_count_set(count);
@@ -888,6 +899,7 @@ int __init_or_module do_one_initcall(initcall_t fn)
 		strlcat(msgbuf, "disabled interrupts ", sizeof(msgbuf));
 		local_irq_enable();
 	}
+	boot_checkpoint(36, "INITCALL RETURN %pF = %d", fn, ret);
 	WARN(msgbuf[0], "initcall %pF returned with %s\n", fn, msgbuf);
 
 	add_latent_entropy();
@@ -996,10 +1008,21 @@ void __init load_default_modules(void)
 
 static int run_init_process(const char *init_filename)
 {
+	int ret;
+
+	boot_checkpoint(26, "INIT EXEC %s", init_filename);
+#ifdef CONFIG_EXYNOS_BOOT_CHECKPOINTS
+	/* Route only PID 1 through the existing syscall tracing entry/exit path. */
+	if (task_pid_nr(current) == 1)
+		set_thread_flag(TIF_SYSCALL_TRACEPOINT);
+#endif
 	argv_init[0] = init_filename;
-	return do_execve(getname_kernel(init_filename),
+	ret = do_execve(getname_kernel(init_filename),
 		(const char __user *const __user *)argv_init,
 		(const char __user *const __user *)envp_init);
+	boot_checkpoint(27, "INIT EXEC RETURN %d FLAGS %lx", ret,
+		current_thread_info()->flags);
+	return ret;
 }
 
 static int try_to_run_init_process(const char *init_filename)
@@ -1050,6 +1073,7 @@ static int __ref kernel_init(void *unused)
 {
 	int ret;
 
+	boot_checkpoint(28, "KERNEL_INIT THREAD ENTER");
 	kernel_init_freeable();
 
 #ifdef CONFIG_SEC_GPIO_DVS
@@ -1063,11 +1087,14 @@ static int __ref kernel_init(void *unused)
 #endif /* CONFIG_SEC_GPIO_DVS */
 
 	/* need to finish all async __init code before freeing the memory */
+	boot_checkpoint(23, "WAIT ASYNC INIT");
 	async_synchronize_full();
+	boot_checkpoint(24, "ASYNC INIT OK");
 #ifndef CONFIG_DEFERRED_INITCALLS
 	free_initmem();
 #endif
 	mark_readonly();
+	boot_checkpoint(25, "INITMEM / READONLY OK");
 	system_state = SYSTEM_RUNNING;
 	numa_default_policy();
 
@@ -1140,12 +1167,16 @@ static noinline void __init kernel_init_freeable(void)
 	do_pre_smp_initcalls();
 	lockup_detector_init();
 
+	boot_checkpoint(19, "ENTER SMP_INIT");
 	smp_init();
+	boot_checkpoint(20, "SMP_INIT OK");
 	sched_init_smp();
 
 	page_alloc_init_late();
 
+	boot_checkpoint(21, "ENTER BASIC SETUP / INITCALLS");
 	do_basic_setup();
+	boot_checkpoint(22, "BASIC SETUP OK");
 
 	/* Open the /dev/console on the rootfs, this should never fail */
 	if (sys_open((const char __user *) "/dev/console", O_RDWR, 0) < 0)
