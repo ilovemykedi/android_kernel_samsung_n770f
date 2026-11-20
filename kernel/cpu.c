@@ -1868,26 +1868,21 @@ static int cpuhp_store_callbacks(enum cpuhp_state state, const char *name,
 	struct cpuhp_step *sp;
 	int ret = 0;
 
-	mutex_lock(&cpuhp_state_mutex);
-
 	if (state == CPUHP_AP_ONLINE_DYN || state == CPUHP_BP_PREPARE_DYN) {
 		ret = cpuhp_reserve_state(state);
 		if (ret < 0)
-			goto out;
+			return ret;
 		state = ret;
 	}
 	sp = cpuhp_get_step(state);
-	if (name && sp->name) {
-		ret = -EBUSY;
-		goto out;
-	}
+	if (name && sp->name)
+		return -EBUSY;
+
 	sp->startup.single = startup;
 	sp->teardown.single = teardown;
 	sp->name = name;
 	sp->multi_instance = multi_instance;
 	INIT_HLIST_HEAD(&sp->list);
-out:
-	mutex_unlock(&cpuhp_state_mutex);
 	return ret;
 }
 
