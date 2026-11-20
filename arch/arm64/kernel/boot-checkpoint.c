@@ -9,6 +9,7 @@
  * read-modify-written (HW_TRIG_EN) instead of overwritten.
  */
 #include <linux/boot_checkpoint.h>
+#include <linux/delay.h>
 #include <linux/font.h>
 #include <linux/io.h>
 #include <linux/init.h>
@@ -63,6 +64,7 @@ static DEFINE_RAW_SPINLOCK(checkpoint_lock);
 static phys_addr_t fb_phys;
 static unsigned int stride, width, height, scale, format;
 static bool linear, active;
+static u32 orig_trig;
 
 static u32 __init early_reg(phys_addr_t addr)
 {
@@ -312,6 +314,7 @@ found:
 	if (trigger) {
 		/* as decon_reg_set_trigger(DECON_TRIG_ENABLE) for HW trigger */
 		trig = readl(trigger);
+		orig_trig = trig;
 		writel((trig & ~HW_TRIG_MASK_DECON) | HW_TRIG_EN, trigger);
 		early_iounmap(trigger, 4);
 	}
@@ -326,6 +329,31 @@ unavailable:
 void __init boot_checkpoint_linear(void)
 {
 	linear = true;
+}
+
+/*
+ * Called before the DPU drivers take over: once DSIM/DECON power up, the
+ * DPU SysMMUs switch to the kernel's page tables, which do not map the
+ * bootloader buffer. Restore the bootloader's trigger setting (stopping
+ * the TE-driven fetch), let an in-flight frame finish, and stop drawing.
+ */
+void boot_checkpoint_display_release(void)
+{
+	void __iomem *trigger;
+	unsigned long flags;
+
+	if (!active)
+		return;
+	boot_checkpoint(39, "DISPLAY HANDED BACK TO DPU DRIVER");
+	raw_spin_lock_irqsave(&checkpoint_lock, flags);
+	active = false;
+	raw_spin_unlock_irqrestore(&checkpoint_lock, flags);
+	trigger = ioremap(DECON + HW_SW_TRIG_CONTROL, 4);
+	if (trigger) {
+		writel(orig_trig, trigger);
+		iounmap(trigger);
+	}
+	msleep(20);
 }
 
 bool boot_checkpoint_display_active(void)

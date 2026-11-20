@@ -9,6 +9,7 @@
  * published by the Free Software Foundation.
 */
 
+#include <linux/boot_checkpoint.h>
 #include <linux/kernel.h>
 #include <linux/errno.h>
 #include <linux/clk.h>
@@ -1911,6 +1912,8 @@ static int dsim_probe(struct platform_device *pdev)
 	int ret = 0;
 	struct device *dev = &pdev->dev;
 	struct dsim_device *dsim = NULL;
+
+	boot_checkpoint_display_release();
 
 	dsim = devm_kzalloc(dev, sizeof(struct dsim_device), GFP_KERNEL);
 	if (!dsim) {

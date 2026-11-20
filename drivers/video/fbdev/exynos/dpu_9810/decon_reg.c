@@ -9,7 +9,6 @@
  * published by the Free Software Foundation.
  */
 
-#include <linux/boot_checkpoint.h>
 #include "decon.h"
 /* current setting for 3HF4 & 3HA6 does not support VESA_SCR_V4 */
 /* #define VESA_SCR_V4 */
@@ -1832,15 +1831,8 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 	if (decon_reg_get_run_status(id)) {
 		decon_info("decon_reg_init already called by BOOTLOADER\n");
 		decon_reg_init_probe(id, dsi_idx, p);
-		if (psr->psr_mode == DECON_MIPI_COMMAND_MODE) {
-			if (!id && boot_checkpoint_display_active()) {
-				/* keep the bootloader's TE-driven refresh running */
-				decon_reg_set_trigger(id, psr, DECON_TRIG_ENABLE);
-				boot_checkpoint(39, "BOOTLOADER DECON TRIGGER KEPT ACTIVE");
-			} else {
-				decon_reg_set_trigger(id, psr, DECON_TRIG_DISABLE);
-			}
-		}
+		if (psr->psr_mode == DECON_MIPI_COMMAND_MODE)
+			decon_reg_set_trigger(id, psr, DECON_TRIG_DISABLE);
 		return -EBUSY;
 	}
 
