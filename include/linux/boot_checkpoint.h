@@ -11,6 +11,8 @@ bool boot_checkpoint_display_active(void);
 void boot_checkpoint_display_release(void);
 bool boot_checkpoint_reserved(phys_addr_t start, size_t size);
 void boot_checkpoint_syscall(bool exit, long nr, long ret, unsigned long pc);
+struct pt_regs;
+void boot_checkpoint_trace(bool exit, struct pt_regs *regs);
 #else
 static inline void boot_checkpoint(unsigned int row, const char *fmt, ...) {}
 static inline void boot_checkpoint_fb_init(void) {}
@@ -21,6 +23,8 @@ static inline bool boot_checkpoint_reserved(phys_addr_t start, size_t size)
 {
 	return false;
 }
+struct pt_regs;
+static inline void boot_checkpoint_trace(bool exit, struct pt_regs *regs) {}
 static inline void boot_checkpoint_syscall(bool exit, long nr, long ret,
 					   unsigned long pc) {}
 #endif

@@ -17,6 +17,9 @@
 #include <linux/kernel.h>
 #include <linux/memblock.h>
 #include <linux/sched.h>
+#include <linux/ptrace.h>
+#include <linux/uaccess.h>
+#include <linux/compat.h>
 #include <linux/spinlock.h>
 #include <linux/string.h>
 #include <asm/cacheflush.h>
@@ -380,4 +383,48 @@ void boot_checkpoint_syscall(bool exit, long nr, long ret, unsigned long pc)
 	boot_checkpoint(exit ? 48 : 47, "PID1 %s NR=%ld RET=%ld COUNT=%lu",
 		exit ? "EXIT" : "ENTER", nr, ret, n);
 	boot_checkpoint(49, "PID1 USER PC %016lx", pc);
+}
+
+/*
+ * Debug: log stdout/stderr writes and failing syscalls of the boringssl
+ * self tests (their stdio goes to /dev/null under init).
+ */
+static void bcp_log_write(struct pt_regs *regs)
+{
+	char buf[200];
+	unsigned long len = min_t(unsigned long, regs->regs[2], sizeof(buf) - 1);
+	const char __user *ubuf = (const char __user *)regs->regs[1];
+
+	if (regs->regs[0] != 1 && regs->regs[0] != 2)
+		return;
+	if (is_compat_task())
+		ubuf = compat_ptr((u32)regs->regs[1]);
+	if (copy_from_user(buf, ubuf, len))
+		return;
+	buf[len] = 0;
+	pr_info("bcp: %s[%d] fd%llu: %s\n", current->comm,
+		task_pid_nr(current), regs->regs[0], buf);
+}
+
+void boot_checkpoint_trace(bool exit, struct pt_regs *regs)
+{
+	long nr = regs->syscallno;
+
+	if (task_pid_nr(current) == 1) {
+		boot_checkpoint_syscall(exit, nr, exit ? regs_return_value(regs) : 0,
+					regs->pc);
+		return;
+	}
+	if (strncmp(current->comm, "boringssl", 9))
+		return;
+	if (!exit) {
+		/* write: 4 on AArch32, 64 on AArch64 */
+		if (nr == (is_compat_task() ? 4 : 64))
+			bcp_log_write(regs);
+		return;
+	}
+	if (regs_return_value(regs) < 0 && regs_return_value(regs) > -4096)
+		pr_info("bcp: %s[%d]%s syscall %ld = %ld\n", current->comm,
+			task_pid_nr(current), is_compat_task() ? " compat" : "",
+			nr, regs_return_value(regs));
 }

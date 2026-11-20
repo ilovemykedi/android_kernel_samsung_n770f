@@ -1643,6 +1643,9 @@ int search_binary_handler(struct linux_binprm *bprm)
 #ifdef CONFIG_EXYNOS_BOOT_CHECKPOINTS
 		if (task_pid_nr(current) == 1)
 			boot_checkpoint(34, "PID1 LOADER RETURN %d", retval);
+		/* debug: trace the syscalls of the boringssl self tests */
+		if (retval >= 0 && !strncmp(current->comm, "boringssl", 9))
+			set_thread_flag(TIF_SYSCALL_TRACEPOINT);
 #endif
 		read_lock(&binfmt_lock);
 		put_binfmt(fmt);
