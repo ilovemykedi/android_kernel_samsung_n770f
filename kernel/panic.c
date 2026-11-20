@@ -33,6 +33,7 @@
 
 #ifdef CONFIG_SEC_DEBUG_EXTRA_INFO
 #include <linux/sec_debug.h>
+#include <linux/boot_checkpoint.h>
 #endif
 
 #define PANIC_TIMER_STEP 100
@@ -194,6 +195,8 @@ void panic(const char *fmt, ...)
 	va_start(args, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, args);
 	va_end(args);
+	boot_checkpoint(58, "PANIC %s", buf);
+	boot_checkpoint(59, "PANIC CALLER %pS", __builtin_return_address(0));
 
 #ifdef CONFIG_SEC_DEBUG_AUTO_COMMENT
 	if (buf[strlen(buf) - 1] == '\n')

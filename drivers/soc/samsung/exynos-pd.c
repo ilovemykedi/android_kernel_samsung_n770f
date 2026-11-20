@@ -260,11 +260,16 @@ static void exynos_pd_genpd_init(struct exynos_pm_domain *pd, int state)
 	pd->genpd.power_off = exynos_pd_power_off;
 	pd->genpd.power_on = exynos_pd_power_on;
 
+	/*
+	 * Since 4.10 genpd.states is a pointer: pm_genpd_init() allocates
+	 * the default state, so set the latencies after it.
+	 */
+	if (pm_genpd_init(&pd->genpd, NULL, state ? false : true))
+		return;
+
 	/* pd power on/off latency is less than 1ms */
 	pd->genpd.states[0].power_on_latency_ns = 1000000;
 	pd->genpd.states[0].power_off_latency_ns = 1000000;
-
-	pm_genpd_init(&pd->genpd, NULL, state ? false : true);
 }
 
 /* exynos_pd_show_power_domain - show current power domain status.

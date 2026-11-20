@@ -580,17 +580,28 @@ asmlinkage __visible void __init start_kernel(void)
 	 * and after adding latent and command line entropy.
 	 */
 	add_latent_entropy();
+	boot_checkpoint(40, "11.01 LATENT ENTROPY DONE");
 	add_device_randomness(command_line, strlen(command_line));
+	boot_checkpoint(40, "11.02 DEVICE RANDOMNESS DONE");
 	boot_init_stack_canary();
+	boot_checkpoint(40, "11.03 STACK CANARY DONE");
 	mm_init_cpumask(&init_mm);
+	boot_checkpoint(40, "11.04 MM CPUMASK DONE");
 	setup_command_line(command_line);
+	boot_checkpoint(40, "11.05 SETUP_COMMAND_LINE DONE");
 	setup_nr_cpu_ids();
+	boot_checkpoint(40, "11.06 NR_CPU_IDS DONE");
 	setup_per_cpu_areas();
+	boot_checkpoint(40, "11.07 PER_CPU_AREAS DONE");
 	smp_prepare_boot_cpu();	/* arch-specific boot-cpu hooks */
+	boot_checkpoint(40, "11.08 SMP_PREPARE_BOOT_CPU DONE");
 	boot_cpu_hotplug_init();
+	boot_checkpoint(40, "11.09 CPU_HOTPLUG_INIT DONE");
 
 	build_all_zonelists(NULL, NULL);
+	boot_checkpoint(40, "11.10 BUILD_ALL_ZONELISTS DONE");
 	page_alloc_init();
+	boot_checkpoint(40, "11.11 PAGE_ALLOC_INIT DONE");
 
 #if defined(CONFIG_SAMSUNG_PRODUCT_SHIP) && defined(CONFIG_SEC_DEBUG_HIDING)
 	for (i = 0; i < ARRAY_SIZE(erase_string); i++) {
@@ -611,9 +622,12 @@ asmlinkage __visible void __init start_kernel(void)
 #else
 	pr_notice("Kernel command line: %s\n", boot_command_line);
 #endif
+	boot_checkpoint(40, "11.11a CMDLINE PRINTED");
 	/* parameters may set static keys */
 	jump_label_init();
+	boot_checkpoint(40, "11.12 JUMP_LABEL_INIT DONE");
 	parse_early_param();
+	boot_checkpoint(40, "11.13 PARSE_EARLY_PARAM DONE");
 	after_dashes = parse_args("Booting kernel",
 				  static_command_line, __start___param,
 				  __stop___param - __start___param,
@@ -621,16 +635,22 @@ asmlinkage __visible void __init start_kernel(void)
 	if (!IS_ERR_OR_NULL(after_dashes))
 		parse_args("Setting init args", after_dashes, NULL, 0, -1, -1,
 			   NULL, set_init_arg);
+	boot_checkpoint(40, "11.14 PARSE_ARGS DONE");
 
 	/*
 	 * These use large bootmem allocations and must precede
 	 * kmem_cache_init()
 	 */
 	setup_log_buf(0);
+	boot_checkpoint(40, "11.15 SETUP_LOG_BUF DONE");
 	pidhash_init();
+	boot_checkpoint(40, "11.16 PIDHASH_INIT DONE");
 	vfs_caches_init_early();
+	boot_checkpoint(40, "11.17 VFS_CACHES_INIT_EARLY DONE");
 	sort_main_extable();
+	boot_checkpoint(40, "11.18 SORT_MAIN_EXTABLE DONE");
 	trap_init();
+	boot_checkpoint(40, "11.19 TRAP_INIT DONE");
 	boot_checkpoint(12, "TRAPS OK - ENTER MM_INIT");
 	mm_init();
 	boot_checkpoint(13, "MM_INIT OK");

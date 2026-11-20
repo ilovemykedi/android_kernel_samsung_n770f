@@ -50,6 +50,7 @@
 
 #ifdef CONFIG_SEC_DEBUG
 #include <linux/sec_debug.h>
+#include <linux/boot_checkpoint.h>
 #endif
 
 static const char *handler[]= {
@@ -444,6 +445,9 @@ void die(const char *str, struct pt_regs *regs, int err)
 	raw_spin_lock(&die_lock);
 	console_verbose();
 	bust_spinlocks(1);
+	boot_checkpoint(56, "OOPS %s PID %d %s", str, task_pid_nr(current), current->comm);
+	if (regs)
+		boot_checkpoint(57, "OOPS PC %pS LR %pS", (void *)regs->pc, (void *)regs->regs[30]);
 	ret = __die(str, err, regs);
 
 	if (regs && kexec_should_crash(current))

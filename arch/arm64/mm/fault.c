@@ -673,9 +673,11 @@ asmlinkage void __exception do_mem_abort(unsigned long addr, unsigned int esr,
 		unsigned long n = ++faults;
 
 		if (n < 32 || !(n & 1023)) {
-			boot_checkpoint(51, "PID1 FAULT PC %016llx", regs->pc);
+			boot_checkpoint(51, "PID1 FAULT PC %pS", (void *)regs->pc);
 			boot_checkpoint(52, "PID1 FAULT ADDR %016lx", addr);
 			boot_checkpoint(53, "PID1 FAULT ESR %08x COUNT %lu", esr, n);
+			boot_checkpoint(54, "PID1 FAULT LR %pS FS %s", (void *)regs->regs[30],
+				segment_eq(get_fs(), KERNEL_DS) ? "KERNEL" : "USER");
 		}
 	}
 #endif
