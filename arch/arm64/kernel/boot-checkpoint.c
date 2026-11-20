@@ -17,6 +17,7 @@
 #include <linux/memblock.h>
 #include <linux/sched.h>
 #include <linux/spinlock.h>
+#include <linux/string.h>
 #include <asm/cacheflush.h>
 #include <asm/early_ioremap.h>
 #include <asm/memory.h>
@@ -34,6 +35,7 @@
 #define GLOBAL_CONTROL		0x0000
 #define RUN_STATUS		BIT(4)
 #define HW_SW_TRIG_CONTROL	0x0070
+#define HW_TRIG_MASK_DECON	BIT(4)
 #define HW_TRIG_EN		BIT(0)
 #define DATA_PATH_CONTROL_0	0x0214	/* WIN_EN_F(win) = 1 << (4 * win) */
 #define DATA_PATH_CONTROL_1	0x0218	/* WIN_CHMAP_F(win, ch) */
@@ -187,27 +189,58 @@ static bool __init scanout_valid(phys_addr_t phys, u32 dma, size_t bytes,
 	return true;
 }
 
+/* The bootloader passes its (unreserved) scanout as s3cfb.bootloaderfb=. */
+static phys_addr_t __init cmdline_fb(void)
+{
+	const char *p = strstr(boot_command_line, "s3cfb.bootloaderfb=");
+
+	return p ? memparse(p + strlen("s3cfb.bootloaderfb="), NULL) : 0;
+}
+
+/*
+ * The bootloader framebuffer is not in reserved-memory on r7. Claim it
+ * only if it is plain RAM outside the kernel/initrd that nothing has
+ * reserved yet (or that is already fully reserved).
+ */
+static bool __init claim_cmdline_fb(phys_addr_t phys, size_t bytes)
+{
+	phys_addr_t end = phys + PAGE_ALIGN(bytes);
+
+	if (!phys || (phys & ~PAGE_MASK) ||
+	    !memblock_is_region_memory(phys, PAGE_ALIGN(bytes)))
+		return false;
+	if (phys < __pa_symbol(_end) && end > __pa_symbol(_text))
+		return false;
+	if (initrd_start && phys < __virt_to_phys(initrd_end) &&
+	    end > __virt_to_phys(initrd_start))
+		return false;
+	if (memblock_is_region_reserved(phys, PAGE_ALIGN(bytes)))
+		return scanout_valid(phys, phys, bytes, 0);
+	return !memblock_reserve(phys, PAGE_ALIGN(bytes));
+}
+
 void __init boot_checkpoint_fb_init(void)
 {
-	u32 windows, channels, channel, win, cfg, src, img, offset, dma, trig;
-	phys_addr_t table, mmu;
+	u32 windows, channels, channel = 0, win, cfg, src, img, offset, dma, trig;
+	phys_addr_t table, mmu, bootfb = cmdline_fb();
 	size_t bytes;
 	void __iomem *trigger;
 	bool translated = false;
+	const char *how = "DECON";
 	int i;
 
 	if (!(early_reg(DECON + GLOBAL_CONTROL) & RUN_STATUS))
-		goto unavailable;
+		goto fallback;
 	windows = early_reg(DECON + DATA_PATH_CONTROL_0);
 	channels = early_reg(DECON + DATA_PATH_CONTROL_1);
 	for (win = 0; win < 6; win++)
 		if ((windows & (3U << (win * 4))) == (1U << (win * 4)))
 			break;
 	if (win == 6)
-		goto unavailable;
+		goto fallback;
 	channel = (channels >> (win * 4)) & 7;
 	if (channel >= NR_IDMA)
-		goto unavailable;
+		goto fallback;
 	mmu = IDMA + channel * 0x1000;
 	cfg = early_reg(mmu + IDMA_IN_CON);
 	format = (cfg >> 11) & 31;
@@ -215,7 +248,7 @@ void __init boot_checkpoint_fb_init(void)
 	if (format > 7 || (cfg & (IDMA_VR_MODE_EN | IDMA_ROTATION_MASK |
 				  IDMA_AFBC_EN | IDMA_BLOCK_EN)) ||
 	    (early_reg(mmu + IDMA_ENABLE) & IDMA_INSTANT_OFF_PENDING))
-		goto unavailable;
+		goto fallback;
 	src = early_reg(mmu + IDMA_SRC_SIZE);
 	img = early_reg(mmu + IDMA_IMG_SIZE);
 	offset = early_reg(mmu + IDMA_SRC_OFFSET);
@@ -226,11 +259,11 @@ void __init boot_checkpoint_fb_init(void)
 	if (offset || width < 720 || width > 4096 || height < 1280 ||
 	    height > 4096 || stride < width || stride > 1536 ||
 	    height > ((src >> 16) & 0x3fff))
-		goto unavailable;
+		goto fallback;
 	scale = width >= 1280 ? 2 : 1;
 	bytes = (size_t)stride * height * 4;
 	if (!dma || (dma & ~PAGE_MASK) || (u64)dma + bytes > (1ULL << 32))
-		goto unavailable;
+		goto fallback;
 
 	/* The DPP-to-SysMMU routing is not fixed here: try each enabled one. */
 	for (i = 0; i < ARRAY_SIZE(dpu_sysmmu); i++) {
@@ -239,34 +272,51 @@ void __init boot_checkpoint_fb_init(void)
 		translated = true;
 		table = (phys_addr_t)early_reg(dpu_sysmmu[i] + REG_PT_BASE_PPN) << 12;
 		fb_phys = scanout_phys(dma, table);
-		if (scanout_valid(fb_phys, dma, bytes, table))
+		if (scanout_valid(fb_phys, dma, bytes, table) ||
+		    (fb_phys == bootfb && claim_cmdline_fb(fb_phys, bytes)))
 			goto found;
 	}
 	/* No DPU SysMMU translating: the bootloader scans out physical RAM. */
 	if (!translated) {
 		fb_phys = dma;
-		if (scanout_valid(fb_phys, dma, bytes, 0))
+		if (scanout_valid(fb_phys, dma, bytes, 0) ||
+		    (fb_phys == bootfb && claim_cmdline_fb(fb_phys, bytes)))
 			goto found;
 	}
-	goto unavailable;
+
+fallback:
+	/*
+	 * Registers unusable: fall back to the cmdline framebuffer with the
+	 * r7 panel geometry (1080x2400 ARGB, linear, stride = width).
+	 */
+	how = "CMDLINE";
+	format = 0;
+	width = stride = 1080;
+	height = 2400;
+	scale = 1;
+	bytes = (size_t)stride * height * 4;
+	fb_phys = bootfb;
+	if (!claim_cmdline_fb(fb_phys, bytes))
+		goto unavailable;
 
 found:
 	active = true;
 	for (win = 0; win < ROWS; win++)
 		if (lines[win][0])
 			draw_row(win);
-	boot_checkpoint(0, "BOOT CHECKPOINTS %ux%u CH%u", width, height, channel);
+	boot_checkpoint(0, "BOOT CHECKPOINTS %ux%u CH%u %s", width, height,
+			channel, how);
 	boot_checkpoint(1, "RGB BUFFER %llx FORMAT %u", (u64)fb_phys, format);
 	/* Keep the running bootloader command-mode scanout refreshing on TE. */
 	trigger = early_ioremap(DECON + HW_SW_TRIG_CONTROL, 4);
 	if (trigger) {
+		/* as decon_reg_set_trigger(DECON_TRIG_ENABLE) for HW trigger */
 		trig = readl(trigger);
-		if (!(trig & HW_TRIG_EN))
-			writel(trig | HW_TRIG_EN, trigger);
+		writel((trig & ~HW_TRIG_MASK_DECON) | HW_TRIG_EN, trigger);
 		early_iounmap(trigger, 4);
 	}
-	pr_info("boot-checkpoint: scanout %pa %ux%u stride %u channel %u\n",
-		&fb_phys, width, height, stride, channel);
+	pr_info("boot-checkpoint: %s scanout %pa %ux%u stride %u channel %u\n",
+		how, &fb_phys, width, height, stride, channel);
 	return;
 unavailable:
 	fb_phys = 0;

@@ -1835,8 +1835,7 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 		if (psr->psr_mode == DECON_MIPI_COMMAND_MODE) {
 			if (!id && boot_checkpoint_display_active()) {
 				/* keep the bootloader's TE-driven refresh running */
-				decon_write_mask(id, HW_SW_TRIG_CONTROL, HW_TRIG_EN,
-						HW_TRIG_EN);
+				decon_reg_set_trigger(id, psr, DECON_TRIG_ENABLE);
 				boot_checkpoint(39, "BOOTLOADER DECON TRIGGER KEPT ACTIVE");
 			} else {
 				decon_reg_set_trigger(id, psr, DECON_TRIG_DISABLE);
