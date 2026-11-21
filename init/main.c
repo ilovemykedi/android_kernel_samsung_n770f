@@ -907,6 +907,7 @@ int __init_or_module do_one_initcall(initcall_t fn)
 	if (initcall_blacklisted(fn))
 		return -EPERM;
 
+	boot_checkpoint(35, "INITCALL ENTER %pF", fn);
 	if (initcall_debug)
 		ret = do_one_initcall_debug(fn);
 	else
@@ -914,7 +915,6 @@ int __init_or_module do_one_initcall(initcall_t fn)
 
 	msgbuf[0] = 0;
 
-	boot_checkpoint(35, "INITCALL ENTER %pF", fn);
 	if (preempt_count() != count) {
 		sprintf(msgbuf, "preemption imbalance ");
 		preempt_count_set(count);

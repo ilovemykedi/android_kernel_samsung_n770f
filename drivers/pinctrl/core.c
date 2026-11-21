@@ -2030,10 +2030,19 @@ static int pinctrl_claim_hogs(struct pinctrl_dev *pctldev)
 	}
 
 	if (IS_ERR(pctldev->p)) {
-		dev_err(pctldev->dev, "error claiming hogs: %li\n",
-			PTR_ERR(pctldev->p));
+		/*
+		 * TEMPORARY (n770f uprev): v4.11 (99e4f67508e1) made a hog parse
+		 * error fail the whole controller. The r7 DTB has a hog on
+		 * pinctrl@11050000 that the Samsung driver cannot parse
+		 * ("could not parse property samsung,pins"); v4.9/v4.10 ignored
+		 * it. Failing here leaves UFS without its reset pin and boot
+		 * stalls. Keep the pre-4.11 behaviour until the offending DT
+		 * node is identified on a live device.
+		 */
+		dev_warn(pctldev->dev, "error claiming hogs: %li (ignored)\n",
+			 PTR_ERR(pctldev->p));
 
-		return PTR_ERR(pctldev->p);
+		return 0;
 	}
 
 	kref_get(&pctldev->p->users);
