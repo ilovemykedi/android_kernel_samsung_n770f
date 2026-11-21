@@ -436,6 +436,8 @@ void boot_checkpoint_trace(bool exit, struct pt_regs *regs)
  */
 #include <linux/reboot.h>
 #include <linux/workqueue.h>
+#include <linux/sched/sysctl.h>
+
 
 static void bcp_boot_watchdog(struct work_struct *work);
 static DECLARE_DELAYED_WORK(bcp_boot_watchdog_work, bcp_boot_watchdog);
@@ -473,6 +475,13 @@ static void bcp_boot_watchdog(struct work_struct *work)
 
 static int __init bcp_boot_watchdog_init(void)
 {
+	/*
+	 * Turn silent freezes into panics: on Samsung a panic is a warm reset,
+	 * so last_kmsg survives for recovery (a key reset wipes it).
+	 */
+	sysctl_panic_on_rcu_stall = 1;
+	sysctl_hung_task_panic = 1;
+	sysctl_hung_task_timeout_secs = 60;
 	schedule_delayed_work(&bcp_boot_watchdog_work, 10 * HZ);
 	return 0;
 }

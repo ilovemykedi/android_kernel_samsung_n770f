@@ -92,6 +92,12 @@ static void check_hung_task(struct task_struct *t, unsigned long timeout)
 	if (unlikely(!switch_count))
 		return;
 
+#ifdef CONFIG_EXYNOS_BOOT_CHECKPOINTS
+	/* debug: governor kthreads created but never started on r7 */
+	if (!strncmp(t->comm, "simpleinteract", 14))
+		return;
+#endif
+
 	if (switch_count != t->last_switch_count) {
 		t->last_switch_count = switch_count;
 		return;
