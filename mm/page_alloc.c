@@ -3645,8 +3645,9 @@ __alloc_pages_slowpath(gfp_t gfp_mask, unsigned int order,
 	int retry_loop_count = 0;
 	unsigned long jiffies_s = jiffies;
 	cputime_t stime_s = 0, stime_e, stime_d;
+	cputime_t utime;	/* task_cputime() takes no NULL since 4.10 */
 
-	task_cputime(current, NULL, &stime_s);
+	task_cputime(current, &utime, &stime_s);
 
 	/*
 	 * In the slowpath, we sanity check order to avoid ever trying to
@@ -3870,7 +3871,7 @@ nopage:
 	warn_alloc(gfp_mask,
 			"page allocation failure: order:%u", order);
 got_pg:
-	task_cputime(current, NULL, &stime_e);
+	task_cputime(current, &utime, &stime_e);
 	stime_d = stime_e - stime_s;
 	if (cputime_to_jiffies(stime_d) > HZ / 4) {
 		pg_data_t *pgdat;
