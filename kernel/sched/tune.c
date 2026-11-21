@@ -594,6 +594,19 @@ int schedtune_task_boost(struct task_struct *p)
 	return task_boost;
 }
 
+/*
+ * Android 12+ moves the foreground app into the "top-app" cpu cgroup and
+ * boosts it through uclamp (not available here); schedtune is only mounted
+ * by ROMs that still use it (One UI). When a task was never placed in a
+ * boost group (root group), treat a top-app task like AOSP's top-app stune
+ * group: prefer_idle and, for EHMP, prefer_perf.
+ */
+static inline int schedtune_top_app_fallback(struct schedtune *st,
+					     struct task_struct *p)
+{
+	return st == &root_schedtune && task_group(p)->top_app;
+}
+
 int schedtune_prefer_idle(struct task_struct *p)
 {
 	struct schedtune *st;
@@ -605,7 +618,7 @@ int schedtune_prefer_idle(struct task_struct *p)
 	/* Get prefer_idle value */
 	rcu_read_lock();
 	st = task_schedtune(p);
-	prefer_idle = st->prefer_idle;
+	prefer_idle = max(st->prefer_idle, schedtune_top_app_fallback(st, p));
 	rcu_read_unlock();
 
 	return prefer_idle;
@@ -647,6 +660,7 @@ int schedtune_prefer_perf(struct task_struct *p)
 	rcu_read_lock();
 	st = task_schedtune(p);
 	prefer_perf = max(st->prefer_perf, kernel_prefer_perf(st->idx));
+	prefer_perf = max(prefer_perf, schedtune_top_app_fallback(st, p));
 	rcu_read_unlock();
 
 	return prefer_perf;
