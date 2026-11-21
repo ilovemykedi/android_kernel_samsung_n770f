@@ -1094,13 +1094,29 @@ int __ref _cpus_down(const struct cpumask *cpus, enum cpuhp_state target)
 	if (ret)
 		goto down_fail;
 
-	/* invoke callback */
-	for_each_cpu(cpu, &take_down_cpus) {
-		struct cpuhp_cpu_state *st = per_cpu_ptr(&cpuhp_state, cpu);
+	/*
+	 * Invoke the remaining (BP) teardown callbacks one state at a time for
+	 * all CPUs. Running them CPU by CPU lets a later step of the first CPU
+	 * (e.g. CPUHP_BLK_MQ_PREPARE freezing the queues and waiting for an RCU
+	 * grace period) run before CPUHP_TIMERS_PREPARE has migrated the timers
+	 * of the other dead CPUs, where the RCU GP kthread may be sleeping, and
+	 * the hotplug stalls until the RCU stall detector kicks it.
+	 */
+	for (;;) {
+		bool pending = false;
 
-		ret = cpuhp_down_callbacks(cpu, st, target);
-		if (ret)
-			goto down_fail;
+		for_each_cpu(cpu, &take_down_cpus) {
+			struct cpuhp_cpu_state *st = per_cpu_ptr(&cpuhp_state, cpu);
+
+			if (st->state <= target)
+				continue;
+			pending = true;
+			ret = cpuhp_down_callbacks(cpu, st, st->state - 1);
+			if (ret)
+				goto down_fail;
+		}
+		if (!pending)
+			break;
 	}
 
 	goto out;

@@ -437,6 +437,14 @@ void boot_checkpoint_trace(bool exit, struct pt_regs *regs)
 #include <linux/reboot.h>
 #include <linux/workqueue.h>
 
+static void bcp_boot_watchdog(struct work_struct *work);
+static DECLARE_DELAYED_WORK(bcp_boot_watchdog_work, bcp_boot_watchdog);
+static unsigned int bcp_boot_watchdog_ticks;
+
+/*
+ * Poll every 10 s. Once system_server has been seen, stop for good (a later
+ * Android-side restart of system_server must not trigger a reset).
+ */
 static void bcp_boot_watchdog(struct work_struct *work)
 {
 	struct task_struct *p;
@@ -454,16 +462,18 @@ static void bcp_boot_watchdog(struct work_struct *work)
 		pr_info("bcp: system_server running, boot watchdog off\n");
 		return;
 	}
+	if (++bcp_boot_watchdog_ticks < 15) {
+		schedule_delayed_work(&bcp_boot_watchdog_work, 10 * HZ);
+		return;
+	}
 	pr_emerg("bcp: no system_server after 150 s, dumping tasks and resetting\n");
 	show_state_filter(TASK_UNINTERRUPTIBLE);
 	emergency_restart();
 }
 
-static DECLARE_DELAYED_WORK(bcp_boot_watchdog_work, bcp_boot_watchdog);
-
 static int __init bcp_boot_watchdog_init(void)
 {
-	schedule_delayed_work(&bcp_boot_watchdog_work, 150 * HZ);
+	schedule_delayed_work(&bcp_boot_watchdog_work, 10 * HZ);
 	return 0;
 }
 late_initcall(bcp_boot_watchdog_init);
