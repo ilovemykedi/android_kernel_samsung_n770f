@@ -428,3 +428,42 @@ void boot_checkpoint_trace(bool exit, struct pt_regs *regs)
 			task_pid_nr(current), is_compat_task() ? " compat" : "",
 			nr, regs_return_value(regs));
 }
+
+/*
+ * Debug: a hard key reset wipes the Samsung kernel log. If Android has not
+ * started system_server 150 s after boot, dump blocked tasks and do a
+ * software reset instead, so last_kmsg survives for recovery.
+ */
+#include <linux/reboot.h>
+#include <linux/workqueue.h>
+
+static void bcp_boot_watchdog(struct work_struct *work)
+{
+	struct task_struct *p;
+	bool found = false;
+
+	rcu_read_lock();
+	for_each_process(p) {
+		if (!strcmp(p->comm, "system_server")) {
+			found = true;
+			break;
+		}
+	}
+	rcu_read_unlock();
+	if (found) {
+		pr_info("bcp: system_server running, boot watchdog off\n");
+		return;
+	}
+	pr_emerg("bcp: no system_server after 150 s, dumping tasks and resetting\n");
+	show_state_filter(TASK_UNINTERRUPTIBLE);
+	emergency_restart();
+}
+
+static DECLARE_DELAYED_WORK(bcp_boot_watchdog_work, bcp_boot_watchdog);
+
+static int __init bcp_boot_watchdog_init(void)
+{
+	schedule_delayed_work(&bcp_boot_watchdog_work, 150 * HZ);
+	return 0;
+}
+late_initcall(bcp_boot_watchdog_init);
