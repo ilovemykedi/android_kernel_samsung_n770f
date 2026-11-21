@@ -420,6 +420,11 @@ struct mms_ts_info {
 	u8 *dev_fs_buf;
 #endif
 
+#ifdef CONFIG_EXYNOS_DECON_9810
+	/* display power -> touch LPM, see mms_display_notifier() */
+	struct notifier_block display_nb;
+	bool display_off;
+#endif
 #ifdef CONFIG_VBUS_NOTIFIER
 	struct notifier_block vbus_nb;
 	bool ta_stsatus;

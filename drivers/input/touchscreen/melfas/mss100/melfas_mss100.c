@@ -5,6 +5,10 @@
  *
  */
 
+#ifdef CONFIG_EXYNOS_DECON_9810
+#include <linux/fb.h>
+#include "../../../../video/fbdev/exynos/dpu_9810/decon_notify.h"
+#endif
 #include "melfas_mss100.h"
 
 #if MMS_USE_NAP_MODE
@@ -565,6 +569,50 @@ static void mms_input_close(struct input_dev *dev)
 	mutex_unlock(&info->modechange);
 	cancel_delayed_work(&info->work_print_info);
 }
+
+#ifdef CONFIG_EXYNOS_DECON_9810
+/*
+ * One UI closes/opens the touchscreen through the input core "enabled"
+ * attribute on screen off/on, which is where this driver enters/leaves LPM
+ * (double tap to wake, FOD in screen off, ...). AOSP-based ROMs never write
+ * it, so follow the display power state instead: screen off or doze (AOD)
+ * -> close path, unblank -> open path.
+ */
+static int mms_display_notifier(struct notifier_block *nb,
+				unsigned long event, void *data)
+{
+	struct mms_ts_info *info = container_of(nb, struct mms_ts_info, display_nb);
+	struct fb_event *evdata = data;
+	bool off;
+
+	if (event != FB_EVENT_BLANK && event != DECON_EVENT_DOZE)
+		return NOTIFY_DONE;
+	if (!evdata || !evdata->data || (evdata->info && evdata->info->node))
+		return NOTIFY_DONE;
+
+	if (event == DECON_EVENT_DOZE)
+		off = true;
+	else if (*(int *)evdata->data == FB_BLANK_UNBLANK)
+		off = false;
+	else if (*(int *)evdata->data == FB_BLANK_POWERDOWN)
+		off = true;
+	else
+		return NOTIFY_DONE;
+
+	if (off == info->display_off || !info->input_dev)
+		return NOTIFY_DONE;
+	info->display_off = off;
+
+	input_info(true, &info->client->dev, "%s: display %s\n", __func__,
+		   off ? "off/doze -> close" : "on -> open");
+	if (off)
+		mms_input_close(info->input_dev);
+	else
+		mms_input_open(info->input_dev);
+
+	return NOTIFY_OK;
+}
+#endif
 #endif
 
 /**
@@ -1623,6 +1671,10 @@ static int mms_probe(struct i2c_client *client, const struct i2c_device_id *id)
 #ifdef CONFIG_VBUS_NOTIFIER
 	vbus_notifier_register(&info->vbus_nb, mms_vbus_notification,
 				VBUS_NOTIFY_DEV_CHARGER);
+#endif
+#if defined(CONFIG_EXYNOS_DECON_9810) && MMS_USE_INPUT_OPEN_CLOSE
+	info->display_nb.notifier_call = mms_display_notifier;
+	decon_register_notifier(&info->display_nb);
 #endif
 
 	ret = request_threaded_irq(client->irq, NULL, mms_interrupt,
