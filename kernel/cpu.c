@@ -1281,6 +1281,14 @@ out:
 	return ret;
 }
 
+/*
+ * CPUs brought up together by _cpus_up() while their BP prepare callbacks
+ * run. Each callback otherwise only sees the online CPUs plus its own, so
+ * e.g. the blk-mq remap of CPUHP_BLK_MQ_PREPARE left the other CPUs of the
+ * batch unmapped once they were online. Empty outside _cpus_up().
+ */
+struct cpumask cpuhp_bringup_mask;
+
 static int _cpus_up(const struct cpumask *cpus, int tasks_frozen, enum cpuhp_state target)
 {
 	struct task_struct *idle;
@@ -1363,15 +1371,19 @@ static int _cpus_up(const struct cpumask *cpus, int tasks_frozen, enum cpuhp_sta
 	if (cpumask_empty(&bringup_cpus))
 		goto out;
 
+	/* see cpuhp_bringup_mask */
+	cpumask_copy(&cpuhp_bringup_mask, &bringup_cpus);
 	for_each_cpu(cpu, &bringup_cpus) {
 		struct cpuhp_cpu_state *st = per_cpu_ptr(&cpuhp_state, cpu);
 
 		ret = cpuhp_up_callbacks(cpu, st, CPUHP_BRINGUP_CPU-1);
 		if (ret) {
+			cpumask_clear(&cpuhp_bringup_mask);
 			cpumask_clear_cpu(cpu, &bringup_cpus);
 			goto bringup_fail;
 		}
 	}
+	cpumask_clear(&cpuhp_bringup_mask);
 
 	irq_lock_sparse();
 	for_each_cpu(cpu, &bringup_cpus) {

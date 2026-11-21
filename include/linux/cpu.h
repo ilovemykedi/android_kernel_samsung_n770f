@@ -91,6 +91,7 @@ struct notifier_block;
 #ifdef CONFIG_SMP
 extern bool cpuhp_tasks_frozen;
 int cpus_up(const struct cpumask *enable_cpus);
+extern struct cpumask cpuhp_bringup_mask;
 int cpu_up(unsigned int cpu);
 void notify_cpu_starting(unsigned int cpu);
 extern void cpu_maps_update_begin(void);

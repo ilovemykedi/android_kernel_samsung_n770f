@@ -2286,6 +2286,8 @@ static int blk_mq_queue_reinit_prepare(unsigned int cpu)
 {
 	cpumask_copy(&cpuhp_online_new, cpu_online_mask);
 	cpumask_set_cpu(cpu, &cpuhp_online_new);
+	/* the other CPUs Samsung's _cpus_up() brings up together with @cpu */
+	cpumask_or(&cpuhp_online_new, &cpuhp_online_new, &cpuhp_bringup_mask);
 	blk_mq_queue_reinit_work();
 	return 0;
 }

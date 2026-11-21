@@ -482,6 +482,8 @@ static int __init bcp_boot_watchdog_init(void)
 	sysctl_panic_on_rcu_stall = 1;
 	sysctl_hung_task_panic = 1;
 	sysctl_hung_task_timeout_secs = 60;
+	/* report every blocked task, not just the first 10 */
+	sysctl_hung_task_warnings = -1;
 	schedule_delayed_work(&bcp_boot_watchdog_work, 10 * HZ);
 	return 0;
 }
