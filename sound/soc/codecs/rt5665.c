@@ -6259,9 +6259,7 @@ static void rt5665_calibrate_handler(struct work_struct *work)
 	struct rt5665_priv *rt5665 = container_of(work, struct rt5665_priv,
 		calibrate_work.work);
 
-	/* card is NULL until (and unless) the sound card binds */
-	while (!rt5665->codec->component.card ||
-	       !rt5665->codec->component.card->instantiated) {
+	while (!rt5665->codec->component.card->instantiated) {
 		pr_debug("%s\n", __func__);
 		msleep(20);
 	}

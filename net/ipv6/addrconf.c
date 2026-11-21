@@ -6239,13 +6239,6 @@ static const struct ctl_table addrconf_sysctl[] = {
 		.proc_handler	= proc_dointvec,
 	},
 	{
-		.procname	= "addr_gen_mode",
-		.data		= &ipv6_devconf.addr_gen_mode,
-		.maxlen		= sizeof(int),
-		.mode		= 0644,
-		.proc_handler	= addrconf_sysctl_addr_gen_mode,
-	},
-	{
 		.procname	= "seg6_enabled",
 		.data		= &ipv6_devconf.seg6_enabled,
 		.maxlen		= sizeof(int),

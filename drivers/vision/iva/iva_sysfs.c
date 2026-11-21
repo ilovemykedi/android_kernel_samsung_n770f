@@ -330,11 +330,11 @@ static ssize_t iva_sysfs_show_qos(struct device *dev,
 		struct dev_pm_opp *opp;
 		unsigned long freq = 0;
 
-		rcu_read_lock();
 		do {
 			opp = dev_pm_opp_find_freq_ceil(dev, &freq);
 			if (IS_ERR(opp))
 				break;
+			dev_pm_opp_put(opp);
 
 			if (freq == iva->iva_qos_rate)
 				hit = true;
@@ -344,7 +344,6 @@ static ssize_t iva_sysfs_show_qos(struct device *dev,
 					(freq == iva->iva_qos_rate) ? "(*)" : "");
 			freq++;
 		} while (1);
-		rcu_read_unlock();
 	}
 
 	if (hit) {
@@ -377,11 +376,11 @@ static ssize_t iva_sysfs_set_qos(struct device *dev,
 		struct dev_pm_opp *opp;
 		unsigned long freq = 0;
 
-		rcu_read_lock();
 		do {
 			opp = dev_pm_opp_find_freq_ceil(dev, &freq);
 			if (IS_ERR(opp))
 				break;
+			dev_pm_opp_put(opp);
 
 			if (freq == value) {
 				hit = true;
@@ -390,7 +389,6 @@ static ssize_t iva_sysfs_set_qos(struct device *dev,
 
 			freq++;
 		} while (1);
-		rcu_read_unlock();
 	}
 
 	if (hit)

@@ -1305,18 +1305,16 @@ int exynos_devfreq_sync_voltage(enum exynos_devfreq_type type, bool turn_on)
 				goto out;
 			}
 
-			rcu_read_lock();
 			freq = (unsigned long)data->old_freq;
 			target_opp = devfreq_recommended_opp(data->dev, &freq, 0);
 			if (IS_ERR(target_opp)) {
-				rcu_read_unlock();
 				dev_err(data->dev, "not found valid OPP table for sync\n");
 				regulator_put(data->vdd);
 				ret = PTR_ERR(target_opp);
 				goto out;
 			}
 			data->new_volt = (u32)dev_pm_opp_get_voltage(target_opp);
-			rcu_read_unlock();
+			dev_pm_opp_put(target_opp);
 
 			ret = exynos_devfreq_set_voltage(&data->new_volt, data);
 			if (ret) {
@@ -1507,17 +1505,15 @@ static int exynos_devfreq_tmu_notifier(struct notifier_block *nb, unsigned long 
 		else
 			goto out2;
 
-		rcu_read_lock();
 		freq = (unsigned long)data->old_freq;
 		target_opp = devfreq_recommended_opp(data->dev, &freq, 0);
 		if (IS_ERR(target_opp)) {
-			rcu_read_unlock();
 			dev_err(data->dev, "not found valid OPP table in tmu notifier\n");
 			ret = PTR_ERR(target_opp);
 			goto out2;
 		}
 		data->new_volt = (u32)dev_pm_opp_get_voltage(target_opp);
-		rcu_read_unlock();
+		dev_pm_opp_put(target_opp);
 
 		ret = exynos_devfreq_set_voltage(&data->new_volt, data);
 		if (ret) {
@@ -1648,10 +1644,8 @@ static int exynos_devfreq_target(struct device *dev, unsigned long *target_freq,
 
 	mutex_lock(&data->lock);
 
-	rcu_read_lock();
 	target_opp = devfreq_recommended_opp(dev, target_freq, flags);
 	if (IS_ERR(target_opp)) {
-		rcu_read_unlock();
 		dev_err(dev, "not found valid OPP table\n");
 		ret = PTR_ERR(target_opp);
 		goto out;
@@ -1659,7 +1653,7 @@ static int exynos_devfreq_target(struct device *dev, unsigned long *target_freq,
 
 	*target_freq = dev_pm_opp_get_freq(target_opp);
 	target_volt = (u32)dev_pm_opp_get_voltage(target_opp);
-	rcu_read_unlock();
+	dev_pm_opp_put(target_opp);
 
 	target_idx = exynos_devfreq_get_opp_idx(data->opp_list, data->max_state, *target_freq);
 	if (target_idx < 0) {
@@ -1718,17 +1712,15 @@ static int exynos_devfreq_target(struct device *dev, unsigned long *target_freq,
 			}
 			switch_volt = data->switch_volt;
 		} else {
-			rcu_read_lock();
 			switch_opp = devfreq_recommended_opp(dev, &switch_freq, flags);
 			if (IS_ERR(switch_opp)) {
-				rcu_read_unlock();
 				dev_err(dev, "not found valid OPP table for switch freq\n");
 				ret = PTR_ERR(switch_opp);
 				goto out;
 			}
 
 			switch_volt = (u32)dev_pm_opp_get_voltage(switch_opp);
-			rcu_read_unlock();
+			dev_pm_opp_put(switch_opp);
 		}
 
 		if (data->ops.set_freq_prepare) {
@@ -2162,17 +2154,15 @@ static int exynos_devfreq_probe(struct platform_device *pdev)
 		goto err_old_idx;
 	}
 
-	rcu_read_lock();
 	init_freq = (unsigned long)data->old_freq;
 	init_opp = devfreq_recommended_opp(data->dev, &init_freq, 0);
 	if (IS_ERR(init_opp)) {
-		rcu_read_unlock();
 		dev_err(data->dev, "not found valid OPP table for sync\n");
 		ret = PTR_ERR(init_opp);
 		goto err_get_opp;
 	}
 	data->new_volt = (u32)dev_pm_opp_get_voltage(init_opp);
-	rcu_read_unlock();
+	dev_pm_opp_put(init_opp);
 
 	dev_info(data->dev, "Initial Frequency: %ld, Initial Voltage: %d\n", init_freq,
 		 data->new_volt);
