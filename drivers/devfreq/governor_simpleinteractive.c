@@ -345,6 +345,13 @@ static int devfreq_simple_interactive_register_notifier(struct devfreq *df)
 #else
 	kthread_bind(data->change_freq_task, BOUND_CPU_NUM);
 #endif
+	/*
+	 * Let the thread reach its TASK_INTERRUPTIBLE wait loop. Devices whose
+	 * timer is never armed would otherwise leave it in kthread()'s initial
+	 * TASK_UNINTERRUPTIBLE sleep forever, counting towards the load average
+	 * (and tripping the hung task detector).
+	 */
+	wake_up_process(data->change_freq_task);
 
 	return 0;
 
