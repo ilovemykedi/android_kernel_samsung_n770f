@@ -5,6 +5,7 @@
  *
  */
 
+#include <linux/moduleparam.h>
 #ifdef CONFIG_EXYNOS_DECON_9810
 #include <linux/fb.h>
 #include "../../../../video/fbdev/exynos/dpu_9810/decon_notify.h"
@@ -572,6 +573,17 @@ static void mms_input_close(struct input_dev *dev)
 
 #ifdef CONFIG_EXYNOS_DECON_9810
 /*
+ * Opt-in helpers for ROMs without One UI's touch handling, all off by default
+ * so One UI behaves as stock (/sys/module/melfas_mss100/parameters/):
+ *  follow_display: enter/leave LPM on display off/doze/on (see below)
+ *  fod_lpm_wakeup: a FOD press in LPM also reports KEY_WAKEUP
+ */
+bool mms_follow_display;
+module_param_named(follow_display, mms_follow_display, bool, 0644);
+bool mms_fod_lpm_wakeup;
+module_param_named(fod_lpm_wakeup, mms_fod_lpm_wakeup, bool, 0644);
+
+/*
  * One UI closes/opens the touchscreen through the input core "enabled"
  * attribute on screen off/on, which is where this driver enters/leaves LPM
  * (double tap to wake, FOD in screen off, ...). AOSP-based ROMs never write
@@ -585,6 +597,8 @@ static int mms_display_notifier(struct notifier_block *nb,
 	struct fb_event *evdata = data;
 	bool off;
 
+	if (!mms_follow_display)
+		return NOTIFY_DONE;
 	if (event != FB_EVENT_BLANK && event != DECON_EVENT_DOZE)
 		return NOTIFY_DONE;
 	if (!evdata || !evdata->data || (evdata->info && evdata->info->node))

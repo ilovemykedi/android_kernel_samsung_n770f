@@ -658,12 +658,12 @@ int mms_custom_event_handler(struct mms_ts_info *info, u8 *rbuf, u8 size)
 				input_report_key(info->input_dev, KEY_BLACK_UI_GESTURE, 1);
 				input_sync(info->input_dev);
 				/*
-				 * Screen off / AOD: also wake the screen, so ROMs without
+				 * Opt-in (fod_lpm_wakeup): screen off / AOD also wakes the screen, so ROMs without
 				 * One UI's KEY_BLACK_UI_GESTURE handling (e.g. ColorOS) light
 				 * the panel and run the normal lock screen FOD flow with the
 				 * finger still on the sensor.
 				 */
-				if (info->ic_status == LP_MODE) {
+				if (mms_fod_lpm_wakeup && info->ic_status == LP_MODE) {
 					input_report_key(info->input_dev, KEY_WAKEUP, 1);
 					input_sync(info->input_dev);
 					input_report_key(info->input_dev, KEY_WAKEUP, 0);

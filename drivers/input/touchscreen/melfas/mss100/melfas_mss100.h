@@ -678,4 +678,11 @@ extern unsigned int lcdtype;
 extern void mms_trustedui_mode_on(void);
 #endif
 
+#ifdef CONFIG_EXYNOS_DECON_9810
+extern bool mms_follow_display;
+extern bool mms_fod_lpm_wakeup;
+#else
+#define mms_fod_lpm_wakeup false
+#endif
+
 #endif /* __MELFAS_MMS400_H */
