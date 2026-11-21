@@ -2690,13 +2690,16 @@ static int dpcm_fe_dai_close(struct snd_pcm_substream *fe_substream)
 static void soc_pcm_free(struct snd_pcm *pcm)
 {
 	struct snd_soc_pcm_runtime *rtd = pcm->private_data;
-	struct snd_soc_component *component;
+	struct snd_soc_component *component = &rtd->platform->component;
 
-	list_for_each_entry(component, &rtd->card->component_dev_list,
-			    card_list) {
-		if (component->pcm_free)
-			component->pcm_free(pcm);
-	}
+	/*
+	 * v4.11 called ->pcm_free for every component on the card, which
+	 * destroys the buffers of other links on cards with several
+	 * platforms (Samsung abox). Only the link's own platform, as in
+	 * v4.10; v4.12 does the same through rtd->component_list.
+	 */
+	if (component->pcm_free)
+		component->pcm_free(pcm);
 }
 
 /* create a new pcm */
@@ -2814,15 +2817,15 @@ int soc_new_pcm(struct snd_soc_pcm_runtime *rtd, int num)
 	if (capture)
 		snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_CAPTURE, &rtd->ops);
 
-	list_for_each_entry(component, &rtd->card->component_dev_list, card_list) {
-		if (component->pcm_new) {
-			ret = component->pcm_new(rtd);
-			if (ret < 0) {
-				dev_err(component->dev,
-					"ASoC: pcm constructor failed: %d\n",
-					ret);
-				return ret;
-			}
+	/* only the link's own platform, see soc_pcm_free() */
+	component = &platform->component;
+	if (component->pcm_new) {
+		ret = component->pcm_new(rtd);
+		if (ret < 0) {
+			dev_err(component->dev,
+				"ASoC: pcm constructor failed: %d\n",
+				ret);
+			return ret;
 		}
 	}
 	pcm->private_free = soc_pcm_free;
