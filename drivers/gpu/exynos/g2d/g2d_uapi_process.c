@@ -21,6 +21,7 @@
 #include <linux/ion.h>
 #include <linux/exynos_ion.h>
 #include <linux/exynos_iovmm.h>
+#include <linux/sched/mm.h>
 
 #include <asm/cacheflush.h>
 

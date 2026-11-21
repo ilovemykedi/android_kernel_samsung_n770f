@@ -2081,7 +2081,7 @@ static int ufshcd_queuecommand(struct Scsi_Host *host, struct scsi_cmnd *cmd)
 	/* IO svc time latency histogram */
 	if (hba != NULL && cmd->request != NULL) {
 		if (hba->latency_hist_enabled &&
-		    (cmd->request->cmd_type == REQ_TYPE_FS)) {
+		    !blk_rq_is_passthrough(cmd->request)) {
 			cmd->request->lat_hist_io_start = ktime_get();
 			cmd->request->lat_hist_enabled = 1;
 		} else
@@ -7448,9 +7448,9 @@ ufshcd_send_request_sense(struct ufs_hba *hba, struct scsi_device *sdp)
 		goto out;
 	}
 
-	ret = scsi_execute_req_flags(sdp, cmd, DMA_FROM_DEVICE, buffer,
-				SCSI_SENSE_BUFFERSIZE, NULL,
-				msecs_to_jiffies(1000), 3, NULL, 0, RQF_PM);
+	ret = scsi_execute(sdp, cmd, DMA_FROM_DEVICE, buffer,
+				SCSI_SENSE_BUFFERSIZE, NULL, NULL,
+				msecs_to_jiffies(1000), 3, 0, RQF_PM, NULL);
 	if (ret)
 		pr_err("%s: failed with err %d\n", __func__, ret);
 
@@ -7517,8 +7517,8 @@ static int ufshcd_set_dev_pwr_mode(struct ufs_hba *hba,
 		 * callbacks hence set the RQF_PM flag so that it doesn't resume the
 		 * already suspended childs.
 		 */
-		ret = scsi_execute_req_flags(sdp, cmd, DMA_NONE, NULL, 0, &sshdr,
-					     UFS_START_STOP_TIMEOUT, 2, NULL, 0, RQF_PM);
+		ret = scsi_execute(sdp, cmd, DMA_NONE, NULL, 0, NULL, &sshdr,
+				   UFS_START_STOP_TIMEOUT, 2, 0, RQF_PM, NULL);
 		if (ret) {
 			sdev_printk(KERN_WARNING, sdp,
 				    "START_STOP failed for power mode: %d, result %x\n",

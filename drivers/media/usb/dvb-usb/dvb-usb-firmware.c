@@ -54,9 +54,9 @@ int usb_cypress_load_firmware(struct usb_device *udev, const struct firmware *fw
 		deb_fw("writing to address 0x%04x (buffer: 0x%02x %02x)\n", hx->addr, hx->len, hx->chk);
 		ret = usb_cypress_writemem(udev, hx->addr, hx->data, hx->len);
 
-		if (ret != hx.len) {
+		if (ret != hx->len) {
 			err("error while transferring firmware (transferred size: %d, block size: %d)",
-				ret,hx.len);
+				ret, hx->len);
 			ret = -EINVAL;
 			break;
 		}

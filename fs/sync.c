@@ -26,6 +26,7 @@
 #include <linux/workqueue.h>
 #include <linux/suspend.h>
 #include <linux/delay.h>
+#include <linux/sched/xacct.h>
 
 //#define CONFIG_INTR_SYNC_DEBUG
 
@@ -442,7 +443,7 @@ int vfs_fsync_range(struct file *file, loff_t start, loff_t end, int datasync)
 		spin_unlock(&inode->i_lock);
 		mark_inode_dirty_sync(inode);
 	}
-	return file->f_op->fsync(file, start, end, datasync);
+	return call_fsync(file, start, end, datasync);
 }
 EXPORT_SYMBOL(vfs_fsync_range);
 

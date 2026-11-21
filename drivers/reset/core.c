@@ -41,7 +41,7 @@ struct reset_control {
 	struct list_head list;
 	unsigned int id;
 	unsigned int refcnt;
-	int shared;
+	bool shared;
 	atomic_t deassert_count;
 	atomic_t triggered_count;
 };
@@ -143,12 +143,18 @@ EXPORT_SYMBOL_GPL(devm_reset_controller_register);
  * a no-op.
  * Consumers must not use reset_control_(de)assert on shared reset lines when
  * reset_control_reset has been used.
+ *
+ * If rstc is NULL it is an optional reset and the function will just
+ * return 0.
  */
 int reset_control_reset(struct reset_control *rstc)
 {
 	int ret;
 
-	if (WARN_ON(IS_ERR_OR_NULL(rstc)))
+	if (!rstc)
+		return 0;
+
+	if (WARN_ON(IS_ERR(rstc)))
 		return -EINVAL;
 
 	if (!rstc->rcdev->ops->reset)
@@ -182,6 +188,10 @@ EXPORT_SYMBOL_GPL(reset_control_reset);
  * internal state to be reset, but must be prepared for this to happen.
  * Consumers must not use reset_control_reset on shared reset lines when
  * reset_control_(de)assert has been used.
+ * return 0.
+ *
+ * If rstc is NULL it is an optional reset and the function will just
+ * return 0.
  */
 int reset_control_assert(struct reset_control *rstc)
 {
@@ -216,6 +226,10 @@ EXPORT_SYMBOL_GPL(reset_control_assert);
  * After calling this function, the reset is guaranteed to be deasserted.
  * Consumers must not use reset_control_reset on shared reset lines when
  * reset_control_(de)assert has been used.
+ * return 0.
+ *
+ * If rstc is NULL it is an optional reset and the function will just
+ * return 0.
  */
 int reset_control_deassert(struct reset_control *rstc)
 {
@@ -263,7 +277,7 @@ EXPORT_SYMBOL_GPL(reset_control_status);
 
 static struct reset_control *__reset_control_get_internal(
 				struct reset_controller_dev *rcdev,
-				unsigned int index, int shared)
+				unsigned int index, bool shared)
 {
 	struct reset_control *rstc;
 

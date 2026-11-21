@@ -46,7 +46,6 @@ deps_drivers/dma-buf/seqno-fence.o := \
     $(wildcard include/config/profile/all/branches.h) \
     $(wildcard include/config/enable/must/check.h) \
     $(wildcard include/config/enable/warn/deprecated.h) \
-    $(wildcard include/config/kprobes.h) \
   include/linux/compiler-gcc.h \
     $(wildcard include/config/arch/supports/optimized/inlining.h) \
     $(wildcard include/config/optimize/inlining.h) \
@@ -136,8 +135,8 @@ deps_drivers/dma-buf/seqno-fence.o := \
     $(wildcard include/config/printk.h) \
     $(wildcard include/config/dynamic/debug.h) \
   include/linux/init.h \
-    $(wildcard include/config/debug/rodata.h) \
-    $(wildcard include/config/debug/set/module/ronx.h) \
+    $(wildcard include/config/strict/kernel/rwx.h) \
+    $(wildcard include/config/strict/module/rwx.h) \
     $(wildcard include/config/deferred/initcalls.h) \
   include/linux/kern_levels.h \
   include/linux/cache.h \
@@ -334,6 +333,8 @@ deps_drivers/dma-buf/seqno-fence.o := \
   include/uapi/linux/personality.h \
   arch/arm64/include/asm/pgtable-types.h \
   include/asm-generic/pgtable-nopud.h \
+  include/asm-generic/pgtable-nop4d-hack.h \
+  include/asm-generic/5level-fixup.h \
   arch/arm64/include/asm/memory.h \
     $(wildcard include/config/arm64/va/bits.h) \
     $(wildcard include/config/blk/dev/initrd.h) \
@@ -383,11 +384,11 @@ deps_drivers/dma-buf/seqno-fence.o := \
     $(wildcard include/config/rcu/boost.h) \
     $(wildcard include/config/rcu/nocb/cpu/all.h) \
     $(wildcard include/config/no/hz/full/sysidle.h) \
+    $(wildcard include/config/ppc.h) \
   include/linux/cpumask.h \
     $(wildcard include/config/cpumask/offstack.h) \
     $(wildcard include/config/sched/hmp.h) \
     $(wildcard include/config/debug/per/cpu/maps.h) \
-  include/linux/completion.h \
   include/linux/debugobjects.h \
     $(wildcard include/config/debug/objects/free.h) \
   include/linux/ktime.h \
@@ -423,17 +424,8 @@ deps_drivers/dma-buf/seqno-fence.o := \
     $(wildcard include/config/sysfs.h) \
     $(wildcard include/config/wq/watchdog.h) \
   include/linux/timer.h \
-    $(wildcard include/config/timer/stats.h) \
     $(wildcard include/config/debug/objects/timers.h) \
     $(wildcard include/config/no/hz/common.h) \
-  include/linux/sysctl.h \
-    $(wildcard include/config/sysctl.h) \
-  include/linux/rbtree.h \
-  include/linux/uidgid.h \
-    $(wildcard include/config/multiuser.h) \
-    $(wildcard include/config/user/ns.h) \
-  include/linux/highuid.h \
-  include/uapi/linux/sysctl.h \
   include/linux/topology.h \
     $(wildcard include/config/use/percpu/numa/node/id.h) \
     $(wildcard include/config/sched/smt.h) \
@@ -458,29 +450,16 @@ deps_drivers/dma-buf/seqno-fence.o := \
   include/linux/kmemleak.h \
     $(wildcard include/config/debug/kmemleak.h) \
   include/linux/kasan.h \
+  include/linux/seqno-fence.h \
+  include/linux/dma-fence.h \
+    $(wildcard include/config/dma/fence/trace.h) \
+  include/linux/kref.h \
+  include/linux/refcount.h \
   include/linux/sched.h \
-    $(wildcard include/config/cpu/quiet.h) \
-    $(wildcard include/config/sched/debug.h) \
-    $(wildcard include/config/lockup/detector.h) \
-    $(wildcard include/config/detect/hung/task.h) \
-    $(wildcard include/config/core/dump/default/elf/headers.h) \
     $(wildcard include/config/virt/cpu/accounting/native.h) \
-    $(wildcard include/config/sched/autogroup.h) \
-    $(wildcard include/config/bsd/process/acct.h) \
-    $(wildcard include/config/taskstats.h) \
-    $(wildcard include/config/audit.h) \
-    $(wildcard include/config/inotify/user.h) \
-    $(wildcard include/config/fanotify.h) \
-    $(wildcard include/config/epoll.h) \
-    $(wildcard include/config/posix/mqueue.h) \
-    $(wildcard include/config/keys.h) \
-    $(wildcard include/config/perf/events.h) \
-    $(wildcard include/config/bpf/syscall.h) \
     $(wildcard include/config/sched/info.h) \
-    $(wildcard include/config/schedstats.h) \
-    $(wildcard include/config/task/delay/acct.h) \
-    $(wildcard include/config/sched/mc.h) \
     $(wildcard include/config/sched/ehmp.h) \
+    $(wildcard include/config/schedstats.h) \
     $(wildcard include/config/sched/walt.h) \
     $(wildcard include/config/fair/group/sched.h) \
     $(wildcard include/config/rt/group/sched.h) \
@@ -494,7 +473,9 @@ deps_drivers/dma-buf/seqno-fence.o := \
     $(wildcard include/config/arch/has/scaled/cputime.h) \
     $(wildcard include/config/cpu/freq/times.h) \
     $(wildcard include/config/virt/cpu/accounting/gen.h) \
+    $(wildcard include/config/posix/timers.h) \
     $(wildcard include/config/sysvipc.h) \
+    $(wildcard include/config/detect/hung/task.h) \
     $(wildcard include/config/auditsyscall.h) \
     $(wildcard include/config/rt/mutexes.h) \
     $(wildcard include/config/ubsan.h) \
@@ -503,7 +484,8 @@ deps_drivers/dma-buf/seqno-fence.o := \
     $(wildcard include/config/cpusets.h) \
     $(wildcard include/config/intel/rdt/a.h) \
     $(wildcard include/config/futex.h) \
-    $(wildcard include/config/arch/want/batched/unmap/tlb/flush.h) \
+    $(wildcard include/config/perf/events.h) \
+    $(wildcard include/config/task/delay/acct.h) \
     $(wildcard include/config/fault/injection.h) \
     $(wildcard include/config/latencytop.h) \
     $(wildcard include/config/function/graph/tracer.h) \
@@ -513,44 +495,18 @@ deps_drivers/dma-buf/seqno-fence.o := \
     $(wildcard include/config/sdp.h) \
     $(wildcard include/config/vmap/stack.h) \
     $(wildcard include/config/sec/debug/dtask.h) \
+    $(wildcard include/config/bpf/syscall.h) \
     $(wildcard include/config/ksu/susfs.h) \
-    $(wildcard include/config/arch/wants/dynamic/task/struct.h) \
-    $(wildcard include/config/have/unstable/sched/clock.h) \
-    $(wildcard include/config/irq/time/accounting.h) \
-    $(wildcard include/config/proc/fs.h) \
-    $(wildcard include/config/stack/growsup.h) \
-    $(wildcard include/config/have/copy/thread/tls.h) \
-    $(wildcard include/config/have/exit/thread.h) \
-    $(wildcard include/config/debug/stack/usage.h) \
   include/uapi/linux/sched.h \
-  include/linux/sched/prio.h \
-  include/linux/capability.h \
-  include/uapi/linux/capability.h \
-  include/linux/plist.h \
-    $(wildcard include/config/debug/pi/list.h) \
-  include/linux/mm_types.h \
-    $(wildcard include/config/split/ptlock/cpus.h) \
-    $(wildcard include/config/arch/enable/split/pmd/ptlock.h) \
-    $(wildcard include/config/have/cmpxchg/double.h) \
-    $(wildcard include/config/have/aligned/struct/page.h) \
-    $(wildcard include/config/userfaultfd.h) \
-    $(wildcard include/config/aio.h) \
-    $(wildcard include/config/mmu/notifier.h) \
-  include/linux/auxvec.h \
-  include/uapi/linux/auxvec.h \
-  arch/arm64/include/uapi/asm/auxvec.h \
-  include/linux/uprobes.h \
-  arch/arm64/include/asm/mmu.h \
-    $(wildcard include/config/unmap/kernel/at/el0.h) \
-    $(wildcard include/config/harden/branch/predictor.h) \
-  include/linux/cputime.h \
-  arch/arm64/include/generated/asm/cputime.h \
-  include/asm-generic/cputime.h \
-    $(wildcard include/config/virt/cpu/accounting.h) \
-  include/asm-generic/cputime_jiffies.h \
+  include/linux/pid.h \
+  include/linux/rculist.h \
   include/linux/sem.h \
   include/uapi/linux/sem.h \
   include/linux/ipc.h \
+  include/linux/uidgid.h \
+    $(wildcard include/config/multiuser.h) \
+    $(wildcard include/config/user/ns.h) \
+  include/linux/highuid.h \
   include/uapi/linux/ipc.h \
   arch/arm64/include/generated/asm/ipcbuf.h \
   include/uapi/asm-generic/ipcbuf.h \
@@ -562,18 +518,16 @@ deps_drivers/dma-buf/seqno-fence.o := \
   include/uapi/asm-generic/shmbuf.h \
   arch/arm64/include/asm/shmparam.h \
   include/uapi/asm-generic/shmparam.h \
-  include/linux/signal.h \
-    $(wildcard include/config/old/sigaction.h) \
-  include/uapi/linux/signal.h \
-  arch/arm64/include/uapi/asm/signal.h \
-  include/asm-generic/signal.h \
-  include/uapi/asm-generic/signal.h \
-  include/uapi/asm-generic/signal-defs.h \
-  arch/arm64/include/uapi/asm/sigcontext.h \
-  arch/arm64/include/uapi/asm/siginfo.h \
-  include/asm-generic/siginfo.h \
-  include/uapi/asm-generic/siginfo.h \
-  include/linux/pid.h \
+  include/linux/kcov.h \
+  include/uapi/linux/kcov.h \
+  include/linux/plist.h \
+    $(wildcard include/config/debug/pi/list.h) \
+  include/linux/hrtimer.h \
+    $(wildcard include/config/high/res/timers.h) \
+    $(wildcard include/config/time/low/res.h) \
+    $(wildcard include/config/timerfd.h) \
+  include/linux/rbtree.h \
+  include/linux/timerqueue.h \
   include/linux/seccomp.h \
     $(wildcard include/config/seccomp.h) \
     $(wildcard include/config/have/arch/seccomp/filter.h) \
@@ -587,38 +541,31 @@ deps_drivers/dma-buf/seqno-fence.o := \
   include/uapi/asm-generic/unistd.h \
   include/asm-generic/seccomp.h \
   include/uapi/linux/unistd.h \
-  include/linux/rculist.h \
-  include/linux/rtmutex.h \
-    $(wildcard include/config/debug/rt/mutexes.h) \
   include/linux/resource.h \
   include/uapi/linux/resource.h \
   arch/arm64/include/generated/asm/resource.h \
   include/asm-generic/resource.h \
   include/uapi/asm-generic/resource.h \
-  include/linux/hrtimer.h \
-    $(wildcard include/config/high/res/timers.h) \
-    $(wildcard include/config/time/low/res.h) \
-    $(wildcard include/config/timerfd.h) \
-  include/linux/timerqueue.h \
-  include/linux/kcov.h \
-  include/uapi/linux/kcov.h \
+  include/linux/latencytop.h \
+  include/linux/sched/prio.h \
+  include/linux/signal_types.h \
+    $(wildcard include/config/old/sigaction.h) \
+  include/uapi/linux/signal.h \
+  arch/arm64/include/uapi/asm/signal.h \
+  include/asm-generic/signal.h \
+  include/uapi/asm-generic/signal.h \
+  include/uapi/asm-generic/signal-defs.h \
+  arch/arm64/include/uapi/asm/sigcontext.h \
+  arch/arm64/include/uapi/asm/siginfo.h \
+  include/asm-generic/siginfo.h \
+  include/uapi/asm-generic/siginfo.h \
+  include/linux/mm_types_task.h \
+    $(wildcard include/config/split/ptlock/cpus.h) \
+    $(wildcard include/config/arch/enable/split/pmd/ptlock.h) \
+    $(wildcard include/config/arch/want/batched/unmap/tlb/flush.h) \
   include/linux/task_io_accounting.h \
     $(wildcard include/config/task/io/accounting.h) \
-  include/linux/latencytop.h \
-  include/linux/cred.h \
-    $(wildcard include/config/debug/credentials.h) \
-    $(wildcard include/config/security.h) \
-  include/linux/key.h \
-  include/linux/assoc_array.h \
-    $(wildcard include/config/associative/array.h) \
-  include/linux/selinux.h \
-    $(wildcard include/config/security/selinux.h) \
-  include/uapi/linux/magic.h \
   include/linux/sec_debug_types.h \
-  include/linux/seqno-fence.h \
-  include/linux/dma-fence.h \
-    $(wildcard include/config/dma/fence/trace.h) \
-  include/linux/kref.h \
   include/linux/dma-buf.h \
   include/linux/file.h \
   include/linux/scatterlist.h \
@@ -628,24 +575,39 @@ deps_drivers/dma-buf/seqno-fence.o := \
     $(wildcard include/config/arch/has/sg/chain.h) \
     $(wildcard include/config/sg/pool.h) \
   include/linux/mm.h \
+    $(wildcard include/config/sysctl.h) \
     $(wildcard include/config/have/arch/mmap/rnd/bits.h) \
     $(wildcard include/config/have/arch/mmap/rnd/compat/bits.h) \
     $(wildcard include/config/mem/soft/dirty.h) \
     $(wildcard include/config/arch/uses/high/vma/flags.h) \
     $(wildcard include/config/x86.h) \
     $(wildcard include/config/x86/intel/memory/protection/keys.h) \
-    $(wildcard include/config/ppc.h) \
     $(wildcard include/config/parisc.h) \
     $(wildcard include/config/metag.h) \
     $(wildcard include/config/ia64.h) \
     $(wildcard include/config/x86/intel/mpx.h) \
-    $(wildcard include/config/shmem.h) \
+    $(wildcard include/config/stack/growsup.h) \
     $(wildcard include/config/fs/dax.h) \
+    $(wildcard include/config/shmem.h) \
     $(wildcard include/config/debug/vm/rb.h) \
     $(wildcard include/config/page/poisoning.h) \
     $(wildcard include/config/debug/pagealloc.h) \
     $(wildcard include/config/hibernation.h) \
     $(wildcard include/config/hugetlbfs.h) \
+  include/linux/mm_types.h \
+    $(wildcard include/config/have/cmpxchg/double.h) \
+    $(wildcard include/config/have/aligned/struct/page.h) \
+    $(wildcard include/config/userfaultfd.h) \
+    $(wildcard include/config/aio.h) \
+    $(wildcard include/config/mmu/notifier.h) \
+  include/linux/auxvec.h \
+  include/uapi/linux/auxvec.h \
+  arch/arm64/include/uapi/asm/auxvec.h \
+  include/linux/completion.h \
+  include/linux/uprobes.h \
+  arch/arm64/include/asm/mmu.h \
+    $(wildcard include/config/unmap/kernel/at/el0.h) \
+    $(wildcard include/config/harden/branch/predictor.h) \
   include/linux/range.h \
   include/linux/percpu-refcount.h \
   include/linux/bit_spinlock.h \
@@ -673,6 +635,7 @@ deps_drivers/dma-buf/seqno-fence.o := \
   arch/arm64/include/asm/boot.h \
   include/asm-generic/fixmap.h \
   include/asm-generic/pgtable.h \
+    $(wildcard include/config/have/arch/transparent/hugepage/pud.h) \
     $(wildcard include/config/have/arch/soft/dirty.h) \
     $(wildcard include/config/have/arch/huge/vmap.h) \
   include/linux/huge_mm.h \
@@ -732,12 +695,17 @@ deps_drivers/dma-buf/seqno-fence.o := \
   include/linux/kernfs.h \
     $(wildcard include/config/kernfs.h) \
   include/linux/idr.h \
+  include/linux/radix-tree.h \
+    $(wildcard include/config/radix/tree/multiorder.h) \
   include/linux/kobject_ns.h \
   include/linux/stat.h \
   arch/arm64/include/asm/stat.h \
   arch/arm64/include/uapi/asm/stat.h \
   include/uapi/asm-generic/stat.h \
   arch/arm64/include/asm/compat.h \
+  include/linux/sched/task_stack.h \
+    $(wildcard include/config/debug/stack/usage.h) \
+  include/uapi/linux/magic.h \
   include/uapi/linux/stat.h \
   include/linux/klist.h \
   include/linux/pinctrl/devinfo.h \
@@ -747,10 +715,12 @@ deps_drivers/dma-buf/seqno-fence.o := \
   include/linux/fs.h \
     $(wildcard include/config/fscrypt/sdp.h) \
     $(wildcard include/config/fs/posix/acl.h) \
+    $(wildcard include/config/security.h) \
     $(wildcard include/config/cgroup/writeback.h) \
     $(wildcard include/config/ima.h) \
     $(wildcard include/config/fsnotify.h) \
     $(wildcard include/config/fs/encryption.h) \
+    $(wildcard include/config/epoll.h) \
     $(wildcard include/config/five/pa/feature.h) \
     $(wildcard include/config/proca.h) \
     $(wildcard include/config/file/locking.h) \
@@ -769,8 +739,8 @@ deps_drivers/dma-buf/seqno-fence.o := \
     $(wildcard include/config/have/arch/hash.h) \
   include/linux/path.h \
   include/linux/list_lru.h \
-  include/linux/radix-tree.h \
-    $(wildcard include/config/radix/tree/multiorder.h) \
+  include/linux/capability.h \
+  include/uapi/linux/capability.h \
   include/linux/semaphore.h \
   include/linux/fcntl.h \
   include/uapi/linux/fcntl.h \
@@ -780,6 +750,7 @@ deps_drivers/dma-buf/seqno-fence.o := \
   include/uapi/linux/fiemap.h \
   include/linux/migrate_mode.h \
   include/linux/percpu-rwsem.h \
+  include/linux/rcuwait.h \
   include/linux/rcu_sync.h \
   include/linux/delayed_call.h \
   include/uapi/linux/fs.h \
@@ -799,6 +770,19 @@ deps_drivers/dma-buf/seqno-fence.o := \
   include/linux/projid.h \
   include/uapi/linux/quota.h \
   include/linux/nfs_fs_i.h \
+  include/linux/cred.h \
+    $(wildcard include/config/debug/credentials.h) \
+    $(wildcard include/config/keys.h) \
+  include/linux/key.h \
+  include/linux/sysctl.h \
+  include/uapi/linux/sysctl.h \
+  include/linux/assoc_array.h \
+    $(wildcard include/config/associative/array.h) \
+  include/linux/selinux.h \
+    $(wildcard include/config/security/selinux.h) \
+  include/linux/sched/user.h \
+    $(wildcard include/config/fanotify.h) \
+    $(wildcard include/config/posix/mqueue.h) \
   include/linux/pinctrl/pinctrl-state.h \
   include/linux/pm.h \
     $(wildcard include/config/vt/console/sleep.h) \

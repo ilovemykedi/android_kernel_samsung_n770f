@@ -75,7 +75,9 @@ seqno-fence.o: drivers/dma-buf/seqno-fence.c include/linux/kconfig.h \
   arch/arm64/include/asm/sparsemem.h arch/arm64/include/asm/page.h \
   include/linux/personality.h include/uapi/linux/personality.h \
   arch/arm64/include/asm/pgtable-types.h \
-  include/asm-generic/pgtable-nopud.h arch/arm64/include/asm/memory.h \
+  include/asm-generic/pgtable-nopud.h \
+  include/asm-generic/pgtable-nop4d-hack.h \
+  include/asm-generic/5level-fixup.h arch/arm64/include/asm/memory.h \
   arch/arm64/include/generated/asm/sizes.h include/asm-generic/sizes.h \
   include/linux/sizes.h include/asm-generic/memory_model.h \
   include/linux/pfn.h include/asm-generic/getorder.h \
@@ -87,8 +89,8 @@ seqno-fence.o: drivers/dma-buf/seqno-fence.c include/linux/kconfig.h \
   include/linux/debug_locks.h include/linux/rwsem.h include/linux/err.h \
   arch/arm64/include/generated/asm/rwsem.h include/asm-generic/rwsem.h \
   include/linux/srcu.h include/linux/rcupdate.h include/linux/cpumask.h \
-  include/linux/completion.h include/linux/debugobjects.h \
-  include/linux/ktime.h include/linux/time.h include/linux/math64.h \
+  include/linux/debugobjects.h include/linux/ktime.h \
+  include/linux/time.h include/linux/math64.h \
   arch/arm64/include/generated/asm/div64.h include/asm-generic/div64.h \
   include/linux/time64.h include/uapi/linux/time.h \
   include/linux/jiffies.h include/linux/timex.h \
@@ -99,59 +101,56 @@ seqno-fence.o: drivers/dma-buf/seqno-fence.c include/linux/kconfig.h \
   include/clocksource/arm_arch_timer.h include/linux/timecounter.h \
   include/asm-generic/timex.h include/generated/timeconst.h \
   include/linux/timekeeping.h include/linux/rcutree.h \
-  include/linux/workqueue.h include/linux/timer.h include/linux/sysctl.h \
-  include/linux/rbtree.h include/linux/uidgid.h include/linux/highuid.h \
-  include/uapi/linux/sysctl.h include/linux/topology.h \
-  include/linux/smp.h include/linux/llist.h arch/arm64/include/asm/smp.h \
-  arch/arm64/include/asm/percpu.h include/asm-generic/percpu.h \
-  include/linux/percpu-defs.h include/linux/percpu.h \
-  arch/arm64/include/asm/topology.h include/asm-generic/topology.h \
-  include/linux/kmemleak.h include/linux/kasan.h include/linux/sched.h \
-  include/uapi/linux/sched.h include/linux/sched/prio.h \
-  include/linux/capability.h include/uapi/linux/capability.h \
-  include/linux/plist.h include/linux/mm_types.h include/linux/auxvec.h \
-  include/uapi/linux/auxvec.h arch/arm64/include/uapi/asm/auxvec.h \
-  include/linux/uprobes.h arch/arm64/include/asm/mmu.h \
-  include/linux/cputime.h arch/arm64/include/generated/asm/cputime.h \
-  include/asm-generic/cputime.h include/asm-generic/cputime_jiffies.h \
+  include/linux/workqueue.h include/linux/timer.h \
+  include/linux/topology.h include/linux/smp.h include/linux/llist.h \
+  arch/arm64/include/asm/smp.h arch/arm64/include/asm/percpu.h \
+  include/asm-generic/percpu.h include/linux/percpu-defs.h \
+  include/linux/percpu.h arch/arm64/include/asm/topology.h \
+  include/asm-generic/topology.h include/linux/kmemleak.h \
+  include/linux/kasan.h include/linux/seqno-fence.h \
+  include/linux/dma-fence.h include/linux/kref.h \
+  include/linux/refcount.h include/linux/sched.h \
+  include/uapi/linux/sched.h include/linux/pid.h include/linux/rculist.h \
   include/linux/sem.h include/uapi/linux/sem.h include/linux/ipc.h \
+  include/linux/uidgid.h include/linux/highuid.h \
   include/uapi/linux/ipc.h arch/arm64/include/generated/asm/ipcbuf.h \
   include/uapi/asm-generic/ipcbuf.h \
   arch/arm64/include/generated/asm/sembuf.h \
   include/uapi/asm-generic/sembuf.h include/linux/shm.h \
   include/uapi/linux/shm.h arch/arm64/include/generated/asm/shmbuf.h \
   include/uapi/asm-generic/shmbuf.h arch/arm64/include/asm/shmparam.h \
-  include/uapi/asm-generic/shmparam.h include/linux/signal.h \
-  include/uapi/linux/signal.h arch/arm64/include/uapi/asm/signal.h \
-  include/asm-generic/signal.h include/uapi/asm-generic/signal.h \
+  include/uapi/asm-generic/shmparam.h include/linux/kcov.h \
+  include/uapi/linux/kcov.h include/linux/plist.h \
+  include/linux/hrtimer.h include/linux/rbtree.h \
+  include/linux/timerqueue.h include/linux/seccomp.h \
+  include/uapi/linux/seccomp.h arch/arm64/include/asm/seccomp.h \
+  arch/arm64/include/asm/unistd.h arch/arm64/include/uapi/asm/unistd.h \
+  include/asm-generic/unistd.h include/uapi/asm-generic/unistd.h \
+  include/asm-generic/seccomp.h include/uapi/linux/unistd.h \
+  include/linux/resource.h include/uapi/linux/resource.h \
+  arch/arm64/include/generated/asm/resource.h \
+  include/asm-generic/resource.h include/uapi/asm-generic/resource.h \
+  include/linux/latencytop.h include/linux/sched/prio.h \
+  include/linux/signal_types.h include/uapi/linux/signal.h \
+  arch/arm64/include/uapi/asm/signal.h include/asm-generic/signal.h \
+  include/uapi/asm-generic/signal.h \
   include/uapi/asm-generic/signal-defs.h \
   arch/arm64/include/uapi/asm/sigcontext.h \
   arch/arm64/include/uapi/asm/siginfo.h include/asm-generic/siginfo.h \
-  include/uapi/asm-generic/siginfo.h include/linux/pid.h \
-  include/linux/seccomp.h include/uapi/linux/seccomp.h \
-  arch/arm64/include/asm/seccomp.h arch/arm64/include/asm/unistd.h \
-  arch/arm64/include/uapi/asm/unistd.h include/asm-generic/unistd.h \
-  include/uapi/asm-generic/unistd.h include/asm-generic/seccomp.h \
-  include/uapi/linux/unistd.h include/linux/rculist.h \
-  include/linux/rtmutex.h include/linux/resource.h \
-  include/uapi/linux/resource.h \
-  arch/arm64/include/generated/asm/resource.h \
-  include/asm-generic/resource.h include/uapi/asm-generic/resource.h \
-  include/linux/hrtimer.h include/linux/timerqueue.h \
-  include/linux/kcov.h include/uapi/linux/kcov.h \
-  include/linux/task_io_accounting.h include/linux/latencytop.h \
-  include/linux/cred.h include/linux/key.h include/linux/assoc_array.h \
-  include/linux/selinux.h include/uapi/linux/magic.h \
-  include/linux/sec_debug_types.h include/linux/seqno-fence.h \
-  include/linux/dma-fence.h include/linux/kref.h include/linux/dma-buf.h \
-  include/linux/file.h include/linux/scatterlist.h include/linux/mm.h \
-  include/linux/range.h include/linux/percpu-refcount.h \
-  include/linux/bit_spinlock.h include/linux/shrinker.h \
-  include/linux/page_ext.h include/linux/stacktrace.h \
-  include/linux/stackdepot.h include/linux/page_ref.h \
-  include/linux/page-flags.h include/linux/tracepoint-defs.h \
-  include/linux/static_key.h arch/arm64/include/asm/pgtable.h \
-  arch/arm64/include/asm/proc-fns.h \
+  include/uapi/asm-generic/siginfo.h include/linux/mm_types_task.h \
+  include/linux/task_io_accounting.h include/linux/sec_debug_types.h \
+  include/linux/dma-buf.h include/linux/file.h \
+  include/linux/scatterlist.h include/linux/mm.h \
+  include/linux/mm_types.h include/linux/auxvec.h \
+  include/uapi/linux/auxvec.h arch/arm64/include/uapi/asm/auxvec.h \
+  include/linux/completion.h include/linux/uprobes.h \
+  arch/arm64/include/asm/mmu.h include/linux/range.h \
+  include/linux/percpu-refcount.h include/linux/bit_spinlock.h \
+  include/linux/shrinker.h include/linux/page_ext.h \
+  include/linux/stacktrace.h include/linux/stackdepot.h \
+  include/linux/page_ref.h include/linux/page-flags.h \
+  include/linux/tracepoint-defs.h include/linux/static_key.h \
+  arch/arm64/include/asm/pgtable.h arch/arm64/include/asm/proc-fns.h \
   arch/arm64/include/asm/pgtable-prot.h arch/arm64/include/asm/fixmap.h \
   arch/arm64/include/asm/boot.h include/asm-generic/fixmap.h \
   include/asm-generic/pgtable.h include/linux/huge_mm.h \
@@ -163,32 +162,37 @@ seqno-fence.o: drivers/dma-buf/seqno-fence.c include/linux/kconfig.h \
   include/linux/vmalloc.h include/linux/dma-mapping.h \
   include/linux/device.h include/linux/ioport.h include/linux/kobject.h \
   include/linux/sysfs.h include/linux/kernfs.h include/linux/idr.h \
-  include/linux/kobject_ns.h include/linux/stat.h \
-  arch/arm64/include/asm/stat.h arch/arm64/include/uapi/asm/stat.h \
-  include/uapi/asm-generic/stat.h arch/arm64/include/asm/compat.h \
-  include/uapi/linux/stat.h include/linux/klist.h \
-  include/linux/pinctrl/devinfo.h include/linux/pinctrl/consumer.h \
-  include/linux/seq_file.h include/linux/fs.h include/linux/kdev_t.h \
-  include/uapi/linux/kdev_t.h include/linux/dcache.h \
-  include/linux/rculist_bl.h include/linux/list_bl.h \
-  include/linux/lockref.h include/linux/stringhash.h \
-  include/linux/hash.h include/linux/path.h include/linux/list_lru.h \
-  include/linux/radix-tree.h include/linux/semaphore.h \
+  include/linux/radix-tree.h include/linux/kobject_ns.h \
+  include/linux/stat.h arch/arm64/include/asm/stat.h \
+  arch/arm64/include/uapi/asm/stat.h include/uapi/asm-generic/stat.h \
+  arch/arm64/include/asm/compat.h include/linux/sched/task_stack.h \
+  include/uapi/linux/magic.h include/uapi/linux/stat.h \
+  include/linux/klist.h include/linux/pinctrl/devinfo.h \
+  include/linux/pinctrl/consumer.h include/linux/seq_file.h \
+  include/linux/fs.h include/linux/kdev_t.h include/uapi/linux/kdev_t.h \
+  include/linux/dcache.h include/linux/rculist_bl.h \
+  include/linux/list_bl.h include/linux/lockref.h \
+  include/linux/stringhash.h include/linux/hash.h include/linux/path.h \
+  include/linux/list_lru.h include/linux/capability.h \
+  include/uapi/linux/capability.h include/linux/semaphore.h \
   include/linux/fcntl.h include/uapi/linux/fcntl.h \
   arch/arm64/include/uapi/asm/fcntl.h include/uapi/asm-generic/fcntl.h \
   include/uapi/linux/fiemap.h include/linux/migrate_mode.h \
-  include/linux/percpu-rwsem.h include/linux/rcu_sync.h \
-  include/linux/delayed_call.h include/uapi/linux/fs.h \
-  include/uapi/linux/limits.h include/uapi/linux/ioctl.h \
-  arch/arm64/include/generated/asm/ioctl.h include/asm-generic/ioctl.h \
-  include/uapi/asm-generic/ioctl.h include/linux/quota.h \
-  include/linux/percpu_counter.h include/uapi/linux/dqblk_xfs.h \
-  include/linux/dqblk_v1.h include/linux/dqblk_v2.h \
-  include/linux/dqblk_qtree.h include/linux/projid.h \
-  include/uapi/linux/quota.h include/linux/nfs_fs_i.h \
-  include/linux/pinctrl/pinctrl-state.h include/linux/pm.h \
-  include/linux/ratelimit.h arch/arm64/include/asm/device.h \
-  include/linux/pm_wakeup.h include/linux/dma-debug.h \
-  include/linux/dma-direction.h include/linux/kmemcheck.h \
-  arch/arm64/include/asm/dma-mapping.h \
+  include/linux/percpu-rwsem.h include/linux/rcuwait.h \
+  include/linux/rcu_sync.h include/linux/delayed_call.h \
+  include/uapi/linux/fs.h include/uapi/linux/limits.h \
+  include/uapi/linux/ioctl.h arch/arm64/include/generated/asm/ioctl.h \
+  include/asm-generic/ioctl.h include/uapi/asm-generic/ioctl.h \
+  include/linux/quota.h include/linux/percpu_counter.h \
+  include/uapi/linux/dqblk_xfs.h include/linux/dqblk_v1.h \
+  include/linux/dqblk_v2.h include/linux/dqblk_qtree.h \
+  include/linux/projid.h include/uapi/linux/quota.h \
+  include/linux/nfs_fs_i.h include/linux/cred.h include/linux/key.h \
+  include/linux/sysctl.h include/uapi/linux/sysctl.h \
+  include/linux/assoc_array.h include/linux/selinux.h \
+  include/linux/sched/user.h include/linux/pinctrl/pinctrl-state.h \
+  include/linux/pm.h include/linux/ratelimit.h \
+  arch/arm64/include/asm/device.h include/linux/pm_wakeup.h \
+  include/linux/dma-debug.h include/linux/dma-direction.h \
+  include/linux/kmemcheck.h arch/arm64/include/asm/dma-mapping.h \
   arch/arm64/include/asm/xen/hypervisor.h include/xen/arm/hypervisor.h

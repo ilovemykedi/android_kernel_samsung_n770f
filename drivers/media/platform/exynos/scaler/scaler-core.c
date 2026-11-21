@@ -21,6 +21,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/exynos_iovmm.h>
 #include <linux/smc.h>
+#include <linux/sched/clock.h>
 
 #include <media/v4l2-ioctl.h>
 #include <media/m2m1shot.h>

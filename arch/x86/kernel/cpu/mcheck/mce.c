@@ -55,6 +55,8 @@
 
 static DEFINE_MUTEX(mce_chrdev_read_mutex);
 
+static int mce_chrdev_open_count;	/* #times opened */
+
 #define mce_log_get_idx_check(p) \
 ({ \
 	RCU_LOCKDEP_WARN(!rcu_read_lock_sched_held() && \
@@ -132,7 +134,6 @@ void mce_setup(struct mce *m)
 {
 	memset(m, 0, sizeof(struct mce));
 	m->cpu = m->extcpu = smp_processor_id();
-	m->tsc = rdtsc();
 	/* We hope get_seconds stays lockless */
 	m->time = get_seconds();
 	m->cpuvendor = boot_cpu_data.x86_vendor;
@@ -221,9 +222,7 @@ void mce_register_decode_chain(struct notifier_block *nb)
 {
 	atomic_inc(&num_notifiers);
 
-	/* Ensure SRAO notifier has the highest priority in the decode chain. */
-	if (nb != &mce_srao_nb && nb->priority == INT_MAX)
-		nb->priority -= 1;
+	WARN_ON(nb->priority > MCE_PRIO_LOWEST && nb->priority < MCE_PRIO_EDAC);
 
 	blocking_notifier_chain_register(&x86_mce_decoder_chain, nb);
 }
@@ -233,7 +232,7 @@ void mce_unregister_decode_chain(struct notifier_block *nb)
 {
 	atomic_dec(&num_notifiers);
 
-	atomic_notifier_chain_unregister(&x86_mce_decoder_chain, nb);
+	blocking_notifier_chain_unregister(&x86_mce_decoder_chain, nb);
 }
 EXPORT_SYMBOL_GPL(mce_unregister_decode_chain);
 
@@ -326,18 +325,7 @@ static void __print_mce(struct mce *m)
 
 static void print_mce(struct mce *m)
 {
-	int ret = 0;
-
 	__print_mce(m);
-
-	/*
-	 * Print out human-readable details about the MCE error,
-	 * (if the CPU has an implementation for that)
-	 */
-	ret = atomic_notifier_call_chain(&x86_mce_decoder_chain, 0, m);
-	if (ret == NOTIFY_STOP)
-		return;
-
 	pr_emerg_ratelimited(HW_ERR "Run the above through 'mcelog --ascii'\n");
 }
 
@@ -587,7 +575,7 @@ static int srao_decode_notifier(struct notifier_block *nb, unsigned long val,
 }
 static struct notifier_block mce_srao_nb = {
 	.notifier_call	= srao_decode_notifier,
-	.priority = INT_MAX,
+	.priority	= MCE_PRIO_SRAO,
 };
 
 static int mce_default_notifier(struct notifier_block *nb, unsigned long val,
@@ -605,6 +593,10 @@ static int mce_default_notifier(struct notifier_block *nb, unsigned long val,
 	if (atomic_read(&num_notifiers) > 2)
 		return NOTIFY_DONE;
 
+	/* Don't print when mcelog is running */
+	if (mce_chrdev_open_count > 0)
+		return NOTIFY_DONE;
+
 	__print_mce(m);
 
 	return NOTIFY_DONE;
@@ -613,7 +605,7 @@ static int mce_default_notifier(struct notifier_block *nb, unsigned long val,
 static struct notifier_block mce_default_nb = {
 	.notifier_call	= mce_default_notifier,
 	/* lowest prio, we want it to run last. */
-	.priority	= 0,
+	.priority	= MCE_PRIO_LOWEST,
 };
 
 /*
@@ -713,14 +705,8 @@ bool machine_check_poll(enum mcp_flags flags, mce_banks_t *b)
 
 	mce_gather_info(&m, NULL);
 
-	/*
-	 * m.tsc was set in mce_setup(). Clear it if not requested.
-	 *
-	 * FIXME: Propagate @flags to mce_gather_info/mce_setup() to avoid
-	 *	  that dance.
-	 */
-	if (!(flags & MCP_TIMESTAMP))
-		m.tsc = 0;
+	if (flags & MCP_TIMESTAMP)
+		m.tsc = rdtsc();
 
 	for (i = 0; i < mca_cfg.banks; i++) {
 		if (!mce_banks[i].ctl || !test_bit(i, *b))
@@ -1205,6 +1191,7 @@ void do_machine_check(struct pt_regs *regs, long error_code)
 		goto out;
 
 	mce_gather_info(&m, regs);
+	m.tsc = rdtsc();
 
 	final = this_cpu_ptr(&mces_seen);
 	*final = m;
@@ -1379,41 +1366,6 @@ int memory_failure(unsigned long pfn, int vector, int flags)
 	return 0;
 }
 #endif
-
-/*
- * Action optional processing happens here (picking up
- * from the list of faulting pages that do_machine_check()
- * placed into the genpool).
- */
-static void mce_process_work(struct work_struct *dummy)
-{
-	mce_gen_pool_process();
-}
-
-#ifdef CONFIG_X86_MCE_INTEL
-/***
- * mce_log_therm_throt_event - Logs the thermal throttling event to mcelog
- * @cpu: The CPU on which the event occurred.
- * @status: Event status information
- *
- * This function should be called by the thermal interrupt after the
- * event has been processed and the decision was made to log the event
- * further.
- *
- * The status parameter will be saved to the 'status' field of 'struct mce'
- * and historically has been the register value of the
- * MSR_IA32_THERMAL_STATUS (Intel) msr.
- */
-void mce_log_therm_throt_event(__u64 status)
-{
-	struct mce m;
-
-	mce_setup(&m);
-	m.bank = MCE_THERMAL_BANK;
-	m.status = status;
-	mce_log(&m);
-}
-#endif /* CONFIG_X86_MCE_INTEL */
 
 /*
  * Periodic polling timer for "silent" machine check errors.  If the
@@ -1941,7 +1893,6 @@ void mcheck_cpu_clear(struct cpuinfo_x86 *c)
  */
 
 static DEFINE_SPINLOCK(mce_chrdev_state_lock);
-static int mce_chrdev_open_count;	/* #times opened */
 static int mce_chrdev_open_exclu;	/* already open exclusive? */
 
 static int mce_chrdev_open(struct inode *inode, struct file *file)
@@ -2259,7 +2210,7 @@ int __init mcheck_init(void)
 	mce_register_decode_chain(&mce_default_nb);
 	mcheck_vendor_init_severity();
 
-	INIT_WORK(&mce_work, mce_process_work);
+	INIT_WORK(&mce_work, mce_gen_pool_process);
 	init_irq_work(&mce_irq_work, mce_irq_work_cb);
 
 	return 0;

@@ -42,8 +42,26 @@ extern void get_random_bytes_arch(void *buf, int nbytes);
 extern const struct file_operations random_fops, urandom_fops;
 #endif
 
+/*
+ * drivers/char/random.c is the stable-backported batched-entropy version,
+ * which exports get_random_int()/get_random_long(); provide the v4.11
+ * get_random_u32()/get_random_u64() names on top of them.
+ */
 unsigned int get_random_int(void);
 unsigned long get_random_long(void);
+static inline u32 get_random_u32(void)
+{
+	return get_random_int();
+}
+static inline u64 get_random_u64(void)
+{
+#if BITS_PER_LONG == 64
+	return get_random_long();
+#else
+	return ((u64)get_random_int() << 32) | get_random_int();
+#endif
+}
+
 unsigned long randomize_page(unsigned long start, unsigned long range);
 
 u32 prandom_u32(void);

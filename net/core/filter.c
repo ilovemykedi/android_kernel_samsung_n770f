@@ -77,6 +77,7 @@
 #include <net/transp_v6.h>
 #include <net/ipv6.h>
 #include <linux/seg6_local.h>
+#include <net/neighbour.h>
 #include <net/seg6.h>
 #include <net/seg6_local.h>
 #include <net/lwtunnel.h>
@@ -2197,7 +2198,7 @@ static int bpf_out_neigh_v6(struct net *net, struct sk_buff *skb,
 	}
 	if (likely(neigh && !IS_ERR(neigh))) {
 		__this_cpu_inc(xmit_recursion);
-		ret = dst ? dst_neigh_output(dst, neigh, skb) :
+		ret = dst ? neigh_output(neigh, skb) :
 			    neigh->output(neigh, skb);
 		__this_cpu_dec(xmit_recursion);
 		neigh_release(neigh);
@@ -2310,7 +2311,7 @@ static int bpf_out_neigh_v4(struct sk_buff *skb, struct net_device *dev,
 	}
 	if (likely(neigh && !IS_ERR(neigh))) {
 		__this_cpu_inc(xmit_recursion);
-		ret = dst ? dst_neigh_output(dst, neigh, skb) :
+		ret = dst ? neigh_output(neigh, skb) :
 			    neigh->output(neigh, skb);
 		__this_cpu_dec(xmit_recursion);
 		neigh_release(neigh);

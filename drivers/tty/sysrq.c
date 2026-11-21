@@ -14,8 +14,10 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
-#include <linux/sched.h>
+#include <linux/sched/signal.h>
 #include <linux/sched/rt.h>
+#include <linux/sched/debug.h>
+#include <linux/sched/task.h>
 #include <linux/interrupt.h>
 #include <linux/mm.h>
 #include <linux/fs.h>
@@ -297,7 +299,7 @@ static struct sysrq_key_op sysrq_showstate_op = {
 static void sysrq_handle_showstate_blocked(int key)
 {
 	show_state_filter(TASK_UNINTERRUPTIBLE);
-	show_mem(0);
+	show_mem(0, NULL);
 	dump_tasks(NULL, NULL);
 }
 static struct sysrq_key_op sysrq_showstate_blocked_op = {
@@ -327,7 +329,7 @@ static struct sysrq_key_op sysrq_ftrace_dump_op = {
 static void sysrq_handle_showmem(int key)
 {
 	static DEFINE_RATELIMIT_STATE(showmem_rs, DEFAULT_RATELIMIT_INTERVAL, 1);
-	show_mem(0);
+	show_mem(0, NULL);
 	if (__ratelimit(&showmem_rs))
 		dump_tasks(NULL, NULL);
 }

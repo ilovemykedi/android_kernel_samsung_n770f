@@ -12,6 +12,10 @@
  */
 
 #include <linux/plist.h>
+#include <linux/sched/idle.h>
+
+struct sched_entity;
+struct sched_domain;
 
 #ifdef CONFIG_CGROUP_SCHEDTUNE
 enum stune_group {

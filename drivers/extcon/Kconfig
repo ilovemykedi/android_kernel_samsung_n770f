@@ -57,6 +57,15 @@ config EXTCON_MADERA_INPUT_EVENT
 	  Say Y here to enable support for reporting external accessory
 	  detection events through input key events on Cirrus Logic Madera
 	  class codecs.
+config EXTCON_INTEL_INT3496
+	tristate "Intel INT3496 ACPI device extcon driver"
+	depends on GPIOLIB && ACPI && (X86 || COMPILE_TEST)
+	help
+	  Say Y here to enable extcon support for USB OTG ports controlled by
+	  an Intel INT3496 ACPI device.
+
+	  This ACPI device is typically found on Intel Baytrail or Cherrytrail
+	  based tablets, or other Baytrail / Cherrytrail devices.
 
 config EXTCON_MAX14577
 	tristate "Maxim MAX14577/77836 EXTCON Support"

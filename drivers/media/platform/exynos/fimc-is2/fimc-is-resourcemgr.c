@@ -63,6 +63,7 @@
 
 #ifdef CONFIG_SCHED_EHMP
 #include <linux/ehmp.h>
+#include <linux/sched/clock.h>
 struct gb_qos_request gb_req = {
 	.name = "camera_ehmp_boost",
 };

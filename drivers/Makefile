@@ -15,6 +15,9 @@ obj-$(CONFIG_PINCTRL)		+= pinctrl/
 obj-$(CONFIG_GPIOLIB)		+= gpio/
 obj-y				+= pwm/
 obj-$(CONFIG_PCI)		+= pci/
+# PCI dwc controller drivers
+# pci/dwc/ (v4.11 DesignWare split) not built; see drivers/pci/Kconfig
+
 obj-$(CONFIG_PARISC)		+= parisc/
 obj-$(CONFIG_RAPIDIO)		+= rapidio/
 obj-y				+= video/
@@ -233,3 +236,4 @@ obj-$(CONFIG_SPU_VERIFY) += spu_verify/
 obj-y				+= kperfmon/
 
 obj-$(CONFIG_KSU) += kernelsu/
+obj-$(CONFIG_FSI)		+= fsi/

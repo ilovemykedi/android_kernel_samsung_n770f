@@ -28,6 +28,7 @@
 #include "s5p_mfc_utils.h"
 #include "s5p_mfc_buf.h"
 #include "s5p_mfc_mem.h"
+#include <linux/sched/clock.h>
 
 static void mfc_handle_black_bar_info(struct s5p_mfc_dev *dev, struct s5p_mfc_ctx *ctx)
 {

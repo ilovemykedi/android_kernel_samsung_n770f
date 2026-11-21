@@ -34,3 +34,4 @@ obj-$(CONFIG_NET_SOCK_MSG) += skmsg.o
 obj-$(CONFIG_BPF_STREAM_PARSER) += sock_map.o
 endif
 obj-$(CONFIG_BPF_SYSCALL) += bpf_sk_storage.o
+obj-$(CONFIG_GRO_CELLS) += gro_cells.o

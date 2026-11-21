@@ -1609,8 +1609,6 @@ xfs_inode_free_cowblocks(
 	int match;
 	struct xfs_ifork	*ifp = XFS_IFORK_PTR(ip, XFS_COW_FORK);
 
-	ASSERT(!eofb || (eofb && eofb->eof_scan_owner != 0));
-
 	/*
 	 * Just clear the tag if we have an empty cow fork or none at all. It's
 	 * possible the inode was fully unshared since it was originally tagged.

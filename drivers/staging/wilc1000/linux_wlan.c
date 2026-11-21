@@ -213,7 +213,7 @@ static void deinit_irq(struct net_device *dev)
 	vif = netdev_priv(dev);
 	wilc = vif->wilc;
 
-	/* Deintialize IRQ */
+	/* Deinitialize IRQ */
 	if (wilc->dev_irq_num) {
 		free_irq(wilc->dev_irq_num, wilc);
 		gpio_free(wilc->gpio);
@@ -364,7 +364,7 @@ static int linux_wlan_start_firmware(struct net_device *dev)
 		return ret;
 
 	if (!wait_for_completion_timeout(&wilc->sync_event,
-					msecs_to_jiffies(5000)))
+					 msecs_to_jiffies(5000)))
 		return -ETIME;
 
 	return 0;

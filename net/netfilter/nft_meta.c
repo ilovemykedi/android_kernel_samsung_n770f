@@ -48,7 +48,7 @@ void nft_meta_get_eval(const struct nft_expr *expr,
 		nft_reg_store16(dest, (__force u16)skb->protocol);
 		break;
 	case NFT_META_NFPROTO:
-		*dest = nft_pf(pkt);
+		nft_reg_store8(dest, nft_pf(pkt));
 		break;
 	case NFT_META_L4PROTO:
 		if (!pkt->tprot_set)
@@ -151,10 +151,7 @@ void nft_meta_get_eval(const struct nft_expr *expr,
 				nft_reg_store8(dest, PACKET_BROADCAST);
 			break;
 		case NFPROTO_IPV6:
-			if (ipv6_hdr(skb)->daddr.s6_addr[0] == 0xFF)
-				nft_reg_store8(dest, PACKET_MULTICAST);
-			else
-				nft_reg_store8(dest, PACKET_BROADCAST);
+			nft_reg_store8(dest, PACKET_MULTICAST);
 			break;
 		case NFPROTO_NETDEV:
 			switch (skb->protocol) {

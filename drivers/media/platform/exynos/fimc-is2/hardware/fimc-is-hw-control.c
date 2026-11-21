@@ -10,6 +10,7 @@
 
 #include <linux/kernel.h>
 #include <linux/kthread.h>
+#include <linux/sched/clock.h>
 
 #include "fimc-is-err.h"
 #include "fimc-is-core.h"

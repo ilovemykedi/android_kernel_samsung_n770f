@@ -1509,7 +1509,19 @@ static int __init exynos_iommu_of_setup(struct device_node *np)
 	if (!pdev)
 		return -ENODEV;
 
-	of_iommu_set_ops(np, &exynos_iommu_ops);
+	/*
+	 * v4.11 dropped of_iommu_set_ops(); register an iommu_device for this
+	 * node's fwnode so of_iommu_configure() still finds exynos_iommu_ops.
+	 */
+	{
+		struct iommu_device *iommu = kzalloc(sizeof(*iommu), GFP_KERNEL);
+
+		if (!iommu)
+			return -ENOMEM;
+		iommu_device_set_ops(iommu, &exynos_iommu_ops);
+		iommu_device_set_fwnode(iommu, &np->fwnode);
+		iommu_device_register(iommu);
+	}
 	return 0;
 }
 

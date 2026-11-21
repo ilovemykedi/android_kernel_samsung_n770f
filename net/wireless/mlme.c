@@ -48,7 +48,8 @@ void cfg80211_rx_assoc_resp(struct net_device *dev, struct cfg80211_bss *bss,
 	/* update current_bss etc., consumes the bss reference */
 	__cfg80211_connect_result(dev, mgmt->bssid, NULL, 0, ie, len - ieoffs,
 				  status_code,
-				  status_code == WLAN_STATUS_SUCCESS, bss);
+				  status_code == WLAN_STATUS_SUCCESS, bss,
+				  NL80211_TIMEOUT_UNSPECIFIED);
 }
 EXPORT_SYMBOL(cfg80211_rx_assoc_resp);
 
@@ -344,6 +345,11 @@ int cfg80211_mlme_deauth(struct cfg80211_registered_device *rdev,
 	    (!wdev->current_bss ||
 	     !ether_addr_equal(wdev->current_bss->pub.bssid, bssid)))
 		return 0;
+
+	if (ether_addr_equal(wdev->disconnect_bssid, bssid) ||
+	    (wdev->current_bss &&
+	     ether_addr_equal(wdev->current_bss->pub.bssid, bssid)))
+		wdev->conn_owner_nlportid = 0;
 
 	return rdev_deauth(rdev, dev, &req);
 }

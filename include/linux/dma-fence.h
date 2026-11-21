@@ -47,7 +47,7 @@ struct dma_fence_cb;
  * can be compared to decide which fence would be signaled later.
  * @flags: A mask of DMA_FENCE_FLAG_* defined below
  * @timestamp: Timestamp when the fence was signaled.
- * @status: Optional, only valid if < 0, must be set before calling
+ * @error: Optional, only valid if < 0, must be set before calling
  * dma_fence_signal, indicates that the fence has completed with an error.
  *
  * the flags member must be manipulated and read using the appropriate
@@ -138,7 +138,7 @@ struct dma_fence_cb {
  * or some failure occurred that made it impossible to enable
  * signaling. True indicates successful enabling.
  *
- * fence->status may be set in enable_signaling, but only when false is
+ * fence->error may be set in enable_signaling, but only when false is
  * returned.
  *
  * Calling dma_fence_signal before enable_signaling is called allows
@@ -150,7 +150,7 @@ struct dma_fence_cb {
  * the second time will be a noop since it was already signaled.
  *
  * Notes on signaled:
- * May set fence->status if returning true.
+ * May set fence->error if returning true.
  *
  * Notes on wait:
  * Must not be NULL, set to dma_fence_default_wait for default implementation.
@@ -388,6 +388,12 @@ static inline struct dma_fence *dma_fence_later(struct dma_fence *f1,
  * dma_fence_get_status_locked - returns the status upon completion
  * @fence: [in]	the dma_fence to query
  *
+ * Drivers can supply an optional error status condition before they signal
+ * the fence (to indicate whether the fence was completed due to an error
+ * rather than success). The value of the status condition is only valid
+ * if the fence has been signaled, dma_fence_get_status_locked() first checks
+ * the signal state before reporting the error status.
+ *
  * Returns 0 if the fence has not yet been signaled, 1 if the fence has
  * been signaled without an error condition, or a negative error code
  * if the fence has been completed in err.
@@ -407,7 +413,11 @@ int dma_fence_get_status(struct dma_fence *fence);
  * @fence: [in]	the dma_fence
  * @error: [in]	the error to store
  *
- * Must be called before signaling.
+ * Drivers can supply an optional error status condition before they signal
+ * the fence, to indicate that the fence was completed due to an error
+ * rather than success. This must be set before signaling (so that the value
+ * is visible before any waiters on the signal callback are woken). This
+ * helper exists to help catching erroneous setting of #dma_fence.error.
  */
 static inline void dma_fence_set_error(struct dma_fence *fence,
 				       int error)

@@ -52,6 +52,8 @@
 #include <linux/notifier.h>
 #include <linux/suspend.h>
 #include <linux/cpuidle.h>
+#include <linux/nmi.h>
+#include <linux/sched/mm.h>
 #include <soc/samsung/exynos-itmon.h>
 
 #include <asm/system_misc.h>
@@ -652,7 +654,7 @@ static noinline_for_stack long get_file_size(struct file *file)
 {
 	struct kstat st;
 
-	if (vfs_getattr(&file->f_path, &st))
+	if (vfs_getattr(&file->f_path, &st, STATX_BASIC_STATS, AT_STATX_SYNC_AS_STAT))
 		return -1;
 	if (!S_ISREG(st.mode))
 		return -1;

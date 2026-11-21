@@ -190,10 +190,7 @@ void quarantine_put(struct kasan_free_meta *info, struct kmem_cache *cache)
 	if (unlikely(q->bytes > QUARANTINE_PERCPU_SIZE)) {
 		qlist_move_all(q, &temp);
 
-	local_irq_restore(flags);
-
-	if (unlikely(!qlist_empty(&temp))) {
-		spin_lock_irqsave(&quarantine_lock, flags);
+		spin_lock(&quarantine_lock);
 		WRITE_ONCE(quarantine_size, quarantine_size + temp.bytes);
 		qlist_move_all(&temp, &global_quarantine[quarantine_tail]);
 		if (global_quarantine[quarantine_tail].bytes >=
@@ -206,7 +203,7 @@ void quarantine_put(struct kasan_free_meta *info, struct kmem_cache *cache)
 			if (new_tail != quarantine_head)
 				quarantine_tail = new_tail;
 		}
-		spin_unlock_irqrestore(&quarantine_lock, flags);
+		spin_unlock(&quarantine_lock);
 	}
 
 	local_irq_restore(flags);

@@ -24,6 +24,7 @@
 #include <linux/of.h>
 #include <linux/printk.h>
 #include <linux/sched.h>
+#include <linux/sched/topology.h>
 #include <linux/sched_energy.h>
 #include <linux/stddef.h>
 

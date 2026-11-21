@@ -22,6 +22,7 @@
 #if defined(CONFIG_EXYNOS_WD_DVFS)
 #include <linux/exynos-wd.h>
 #endif
+#include <uapi/linux/sched/types.h>
 
 #include "decon.h"
 #include "dsim.h"

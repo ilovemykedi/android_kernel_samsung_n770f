@@ -21,6 +21,7 @@
 
 /* For compatibility */
 #include <linux/fslog.h>
+#include <linux/sched/clock.h>
 
 #define FSLOG_ACTION_CLOSE          	0
 #define FSLOG_ACTION_OPEN           	1

@@ -781,7 +781,7 @@ void perflog_evt(int logid, int arg1)
 	if (arg1 > MAX_MUTEX_RAWDATA) {
 		char log_buffer[PERFLOG_BUFF_STR_MAX_SIZE];
 		int len;
-		cputime_t utime, stime;
+		u64 utime, stime;
 
 		task_cputime(current, &utime, &stime);
 

@@ -44,6 +44,7 @@
 #include <uapi/linux/falloc.h>
 #include <linux/sched.h>
 #include <linux/cpuhotplug.h>
+#include <uapi/linux/sched/types.h>
 
 #include "zram_drv.h"
 #include "../loop.h"
@@ -169,7 +170,7 @@ static void zram_revalidate_disk(struct zram *zram)
 {
 	revalidate_disk(zram->disk);
 	/* revalidate_disk reset the BDI_CAP_STABLE_WRITES so set again */
-	zram->disk->queue->backing_dev_info.capabilities |=
+	zram->disk->queue->backing_dev_info->capabilities |=
 		BDI_CAP_STABLE_WRITES;
 }
 
@@ -3294,7 +3295,7 @@ static int zram_add(void)
 		zram->disk->queue->limits.discard_zeroes_data = 0;
 	queue_flag_set_unlocked(QUEUE_FLAG_DISCARD, zram->disk->queue);
 
-	zram->disk->queue->backing_dev_info.capabilities |=
+	zram->disk->queue->backing_dev_info->capabilities |=
 					BDI_CAP_STABLE_WRITES;
 
 	disk_to_dev(zram->disk)->groups = zram_disk_attr_groups;

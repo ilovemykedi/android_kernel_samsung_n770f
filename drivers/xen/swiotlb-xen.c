@@ -314,9 +314,6 @@ xen_swiotlb_alloc_coherent(struct device *hwdev, size_t size,
 	*/
 	flags &= ~(__GFP_DMA | __GFP_HIGHMEM);
 
-	/* Convert the size to actually allocated. */
-	size = 1UL << (order + XEN_PAGE_SHIFT);
-
 	/* On ARM this function returns an ioremap'ped virtual address for
 	 * which virt_to_phys doesn't return the corresponding physical
 	 * address. In fact on ARM virt_to_phys only works for kernel direct
@@ -366,11 +363,8 @@ xen_swiotlb_free_coherent(struct device *hwdev, size_t size, void *vaddr,
 	 * physical address */
 	phys = xen_bus_to_phys(dev_addr);
 
-	/* Convert the size to actually allocated. */
-	size = 1UL << (order + XEN_PAGE_SHIFT);
-
-	if (!WARN_ON((dev_addr + size - 1 > dma_mask) ||
-		     range_straddles_page_boundary(phys, size)))
+	if (((dev_addr + size - 1 > dma_mask)) ||
+	    range_straddles_page_boundary(phys, size))
 		xen_destroy_contiguous_region(phys, order);
 
 	xen_free_coherent_pages(hwdev, size, vaddr, (dma_addr_t)phys, attrs);
@@ -706,3 +700,31 @@ xen_swiotlb_dma_mmap(struct device *dev, struct vm_area_struct *vma,
 	return dma_common_mmap(dev, vma, cpu_addr, dma_addr, size);
 }
 EXPORT_SYMBOL_GPL(xen_swiotlb_dma_mmap);
+
+/*
+ * This function should be called with the pages from the current domain only,
+ * passing pages mapped from other domains would lead to memory corruption.
+ */
+int
+xen_swiotlb_get_sgtable(struct device *dev, struct sg_table *sgt,
+			void *cpu_addr, dma_addr_t handle, size_t size,
+			unsigned long attrs)
+{
+#if defined(CONFIG_ARM) || defined(CONFIG_ARM64)
+	if (__generic_dma_ops(dev)->get_sgtable) {
+#if 0
+	/*
+	 * This check verifies that the page belongs to the current domain and
+	 * is not one mapped from another domain.
+	 * This check is for debug only, and should not go to production build
+	 */
+		unsigned long bfn = PHYS_PFN(dma_to_phys(dev, handle));
+		BUG_ON (!page_is_ram(bfn));
+#endif
+		return __generic_dma_ops(dev)->get_sgtable(dev, sgt, cpu_addr,
+							   handle, size, attrs);
+	}
+#endif
+	return dma_common_get_sgtable(dev, sgt, cpu_addr, handle, size);
+}
+EXPORT_SYMBOL_GPL(xen_swiotlb_get_sgtable);

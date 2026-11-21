@@ -13,6 +13,7 @@
 #include <trace/events/mfc.h>
 
 #include "s5p_mfc_cal.h"
+#include <linux/sched/clock.h>
 
 /* Reset the device */
 int s5p_mfc_reset_mfc(struct s5p_mfc_dev *dev)

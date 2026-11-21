@@ -14,6 +14,7 @@
 
 #include "s5p_mfc_utils.h"
 #include "s5p_mfc_mem.h"
+#include <linux/sched/clock.h>
 
 void s5p_mfc_add_tail_buf(spinlock_t *plock, struct s5p_mfc_buf_queue *queue,
 		struct s5p_mfc_buf *mfc_buf)

@@ -30,6 +30,8 @@
 #include <linux/susfs_def.h>
 #endif
 #include <linux/fslog.h>
+#include <linux/sched/task.h>
+
 #include "pnode.h"
 #include "internal.h"
 

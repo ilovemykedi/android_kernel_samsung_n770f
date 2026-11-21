@@ -13,6 +13,8 @@
 #include <linux/mm.h>
 #include <linux/kallsyms.h>
 #include <linux/stacktrace.h>
+#include <linux/sched/clock.h>
+#include <uapi/linux/sched/types.h>
 
 #include <asm/cacheflush.h>
 #include <asm/pgtable.h>

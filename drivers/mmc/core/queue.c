@@ -23,6 +23,7 @@
 #include <linux/mmc/card.h>
 #include <linux/mmc/host.h>
 #include <linux/sched/rt.h>
+#include <uapi/linux/sched/types.h>
 
 #include "queue.h"
 #include "block.h"
@@ -39,7 +40,7 @@ static int mmc_prep_request(struct request_queue *q, struct request *req)
 	/*
 	 * We only like normal block requests and discards.
 	 */
-	if (req->cmd_type != REQ_TYPE_FS && req_op(req) != REQ_OP_DISCARD &&
+	if (blk_rq_is_passthrough(req) && req_op(req) != REQ_OP_DISCARD &&
 	    req_op(req) != REQ_OP_SECURE_ERASE) {
 		blk_dump_rq_flags(req, "MMC bad request");
 		return BLKPREP_KILL;
@@ -321,17 +322,17 @@ int mmc_init_queue(struct mmc_queue *mq, struct mmc_card *card,
 
 #ifdef CONFIG_LARGE_DIRTY_BUFFER
 		/* apply more throttle on external sdcard */
-		mq->queue->backing_dev_info.capabilities |= BDI_CAP_STRICTLIMIT;
-		bdi_set_min_ratio(&mq->queue->backing_dev_info, 30);
-		bdi_set_max_ratio(&mq->queue->backing_dev_info, 60);
+		mq->queue->backing_dev_info->capabilities |= BDI_CAP_STRICTLIMIT;
+		bdi_set_min_ratio(mq->queue->backing_dev_info, 30);
+		bdi_set_max_ratio(mq->queue->backing_dev_info, 60);
 #endif
 
 		pr_info("Parameters for external-sdcard: min/max_ratio: %u/%u "
 			"strictlimit: on nr_requests: %lu read_ahead_kb: %lu\n",
-			mq->queue->backing_dev_info.min_ratio,
-			mq->queue->backing_dev_info.max_ratio,
+			mq->queue->backing_dev_info->min_ratio,
+			mq->queue->backing_dev_info->max_ratio,
 			mq->queue->nr_requests,
-			mq->queue->backing_dev_info.ra_pages * 4);
+			mq->queue->backing_dev_info->ra_pages * 4);
 	}
 
 	if (IS_ERR(mq->thread)) {
@@ -376,8 +377,8 @@ void mmc_cleanup_queue(struct mmc_queue *mq)
 
 #ifdef CONFIG_LARGE_DIRTY_BUFFER
 	/* Restore bdi min/max ratio before device removal */
-	bdi_set_min_ratio(&q->backing_dev_info, 0);
-	bdi_set_max_ratio(&q->backing_dev_info, 100);
+	bdi_set_min_ratio(q->backing_dev_info, 0);
+	bdi_set_max_ratio(q->backing_dev_info, 100);
 #endif
 
 	/* Empty the queue */

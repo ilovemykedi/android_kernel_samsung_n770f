@@ -21,8 +21,6 @@
 #define UFS_ANY_VENDOR 0xFFFF
 #define UFS_ANY_MODEL  "ANY_MODEL"
 
-#define MAX_MODEL_LEN 16
-
 #define UFS_VENDOR_TOSHIBA     0x198
 #define UFS_VENDOR_SAMSUNG     0x1CE
 #define UFS_VENDOR_SKHYNIX     0x1AD
@@ -48,7 +46,7 @@ struct ufs_device_info {
  * @quirk: device quirk
  */
 struct ufs_dev_fix {
-	struct ufs_device_info card;
+	struct ufs_dev_desc card;
 	unsigned int quirk;
 };
 

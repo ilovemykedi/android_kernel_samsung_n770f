@@ -307,7 +307,7 @@ static enum resp_states check_op_valid(struct rxe_qp *qp,
 		break;
 
 	default:
-		WARN_ON(1);
+		WARN_ON_ONCE(1);
 		break;
 	}
 
@@ -432,7 +432,6 @@ static enum resp_states check_rkey(struct rxe_qp *qp,
 			qp->resp.va = reth_va(pkt);
 			qp->resp.rkey = reth_rkey(pkt);
 			qp->resp.resid = reth_len(pkt);
-			qp->resp.length = reth_len(pkt);
 		}
 		access = (pkt->mask & RXE_READ_MASK) ? IB_ACCESS_REMOTE_READ
 						     : IB_ACCESS_REMOTE_WRITE;
@@ -496,7 +495,7 @@ static enum resp_states check_rkey(struct rxe_qp *qp,
 		}
 	}
 
-	WARN_ON(qp->resp.mr);
+	WARN_ON_ONCE(qp->resp.mr);
 
 	qp->resp.mr = mem;
 	return RESPST_EXECUTE;
@@ -609,7 +608,7 @@ static struct sk_buff *prepare_ack_packet(struct rxe_qp *qp,
 	pad = (-payload) & 0x3;
 	paylen = rxe_opcode[opcode].length + payload + pad + RXE_ICRC_SIZE;
 
-	skb = rxe->ifc_ops->init_packet(rxe, &qp->pri_av, paylen, ack);
+	skb = rxe_init_packet(rxe, &qp->pri_av, paylen, ack);
 	if (!skb)
 		return NULL;
 
@@ -638,7 +637,7 @@ static struct sk_buff *prepare_ack_packet(struct rxe_qp *qp,
 	if (ack->mask & RXE_ATMACK_MASK)
 		atmack_set_orig(ack, qp->resp.atomic_orig);
 
-	err = rxe->ifc_ops->prepare(rxe, ack, skb, &crc);
+	err = rxe_prepare(rxe, ack, skb, &crc);
 	if (err) {
 		kfree_skb(skb);
 		return NULL;
@@ -809,9 +808,10 @@ static enum resp_states execute(struct rxe_qp *qp, struct rxe_pkt_info *pkt)
 		err = process_atomic(qp, pkt);
 		if (err)
 			return err;
-	} else
+	} else {
 		/* Unreachable */
-		WARN_ON(1);
+		WARN_ON_ONCE(1);
+	}
 
 	/* next expected psn, read handles this separately */
 	qp->resp.psn = (pkt->psn + 1) & BTH_PSN_MASK;
@@ -842,24 +842,17 @@ static enum resp_states do_complete(struct rxe_qp *qp,
 
 	memset(&cqe, 0, sizeof(cqe));
 
-	if (qp->rcq->is_user) {
-		uwc->status             = qp->resp.status;
-		uwc->qp_num             = qp->ibqp.qp_num;
-		uwc->wr_id              = wqe->wr_id;
-	} else {
-		wc->status              = qp->resp.status;
-		wc->qp                  = &qp->ibqp;
-		wc->wr_id               = wqe->wr_id;
-	}
+	wc->wr_id		= wqe->wr_id;
+	wc->status		= qp->resp.status;
+	wc->qp			= &qp->ibqp;
 
+	/* fields after status are not required for errors */
 	if (wc->status == IB_WC_SUCCESS) {
 		wc->opcode = (pkt->mask & RXE_IMMDT_MASK &&
 				pkt->mask & RXE_WRITE_MASK) ?
 					IB_WC_RECV_RDMA_WITH_IMM : IB_WC_RECV;
 		wc->vendor_err = 0;
-		wc->byte_len = (pkt->mask & RXE_IMMDT_MASK &&
-				pkt->mask & RXE_WRITE_MASK) ?
-					qp->resp.length : wqe->dma.length - wqe->dma.resid;
+		wc->byte_len = wqe->dma.length - wqe->dma.resid;
 
 		/* fields after byte_len are different between kernel and user
 		 * space
@@ -1001,9 +994,7 @@ static int send_atomic_ack(struct rxe_qp *qp, struct rxe_pkt_info *pkt,
 	free_rd_atomic_resource(qp, res);
 	rxe_advance_resp_resource(qp);
 
-	memcpy(SKB_TO_PKT(skb), &ack_pkt, sizeof(ack_pkt));
-	memset((unsigned char *)SKB_TO_PKT(skb) + sizeof(ack_pkt), 0,
-	       sizeof(skb->cb) - sizeof(ack_pkt));
+	memcpy(SKB_TO_PKT(skb), &ack_pkt, sizeof(skb->cb));
 
 	res->type = RXE_ATOMIC_MASK;
 	res->atomic.skb = skb;
@@ -1216,6 +1207,19 @@ static enum resp_states do_class_d1e_error(struct rxe_qp *qp)
 	}
 }
 
+void rxe_drain_req_pkts(struct rxe_qp *qp, bool notify)
+{
+	struct sk_buff *skb;
+
+	while ((skb = skb_dequeue(&qp->req_pkts))) {
+		rxe_drop_ref(qp);
+		kfree_skb(skb);
+	}
+
+	while (!qp->srq && qp->rq.queue && queue_head(qp->rq.queue))
+		advance_consumer(qp->rq.queue);
+}
+
 int rxe_responder(void *arg)
 {
 	struct rxe_qp *qp = (struct rxe_qp *)arg;
@@ -1383,21 +1387,10 @@ int rxe_responder(void *arg)
 
 			goto exit;
 
-		case RESPST_RESET: {
-			struct sk_buff *skb;
-
-			while ((skb = skb_dequeue(&qp->req_pkts))) {
-				rxe_drop_ref(qp);
-				kfree_skb(skb);
-			}
-
-			while (!qp->srq && qp->rq.queue &&
-			       queue_head(qp->rq.queue))
-				advance_consumer(qp->rq.queue);
-
+		case RESPST_RESET:
+			rxe_drain_req_pkts(qp, false);
 			qp->resp.wqe = NULL;
 			goto exit;
-		}
 
 		case RESPST_ERROR:
 			qp->resp.goto_error = 0;
@@ -1406,7 +1399,7 @@ int rxe_responder(void *arg)
 			goto exit;
 
 		default:
-			WARN_ON(1);
+			WARN_ON_ONCE(1);
 		}
 	}
 

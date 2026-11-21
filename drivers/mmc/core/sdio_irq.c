@@ -25,6 +25,7 @@
 #include <linux/mmc/card.h>
 #include <linux/mmc/sdio.h>
 #include <linux/mmc/sdio_func.h>
+#include <uapi/linux/sched/types.h>
 
 #include "sdio_ops.h"
 

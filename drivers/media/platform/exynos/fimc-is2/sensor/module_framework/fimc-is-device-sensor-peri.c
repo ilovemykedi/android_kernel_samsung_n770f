@@ -27,6 +27,7 @@
 #include <linux/muic/s2mu106-muic.h>
 #include <linux/muic/s2mu106-muic-hv.h>
 #include <linux/ccic/usbpd_ext.h>
+#include <uapi/linux/sched/types.h>
 #endif
 
 extern struct device *fimc_is_dev;

@@ -26,6 +26,7 @@
 #include <linux/suspend.h>
 #include <linux/shm_ipc.h>
 #include <linux/modem_notifier.h>
+#include <linux/sched/clock.h>
 
 #include <sound/soc.h>
 #include <sound/soc-dapm.h>

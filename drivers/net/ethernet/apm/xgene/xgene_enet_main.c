@@ -290,35 +290,28 @@ static int xgene_enet_tx_completion(struct xgene_enet_desc_ring *cp_ring,
 static int xgene_enet_setup_mss(struct net_device *ndev, u32 mss)
 {
 	struct xgene_enet_pdata *pdata = netdev_priv(ndev);
-	bool mss_index_found = false;
-	int mss_index;
+	int mss_index = -EBUSY;
 	int i;
 
 	spin_lock(&pdata->mss_lock);
 
 	/* Reuse the slot if MSS matches */
-	for (i = 0; !mss_index_found && i < NUM_MSS_REG; i++) {
+	for (i = 0; mss_index < 0 && i < NUM_MSS_REG; i++) {
 		if (pdata->mss[i] == mss) {
 			pdata->mss_refcnt[i]++;
 			mss_index = i;
-			mss_index_found = true;
 		}
 	}
 
 	/* Overwrite the slot with ref_count = 0 */
-	for (i = 0; !mss_index_found && i < NUM_MSS_REG; i++) {
+	for (i = 0; mss_index < 0 && i < NUM_MSS_REG; i++) {
 		if (!pdata->mss_refcnt[i]) {
 			pdata->mss_refcnt[i]++;
 			pdata->mac_ops->set_mss(pdata, mss, i);
 			pdata->mss[i] = mss;
 			mss_index = i;
-			mss_index_found = true;
 		}
 	}
-
-	/* No slots with ref_count = 0 available, return busy */
-	if (!mss_index_found)
-		mss_index = -EBUSY;
 
 	spin_unlock(&pdata->mss_lock);
 
@@ -844,7 +837,7 @@ static int xgene_enet_napi(struct napi_struct *napi, const int budget)
 	processed = xgene_enet_process_ring(ring, budget);
 
 	if (processed != budget) {
-		napi_complete(napi);
+		napi_complete_done(napi, processed);
 		enable_irq(ring->irq);
 	}
 
@@ -1457,7 +1450,7 @@ err:
 	return ret;
 }
 
-static struct rtnl_link_stats64 *xgene_enet_get_stats64(
+static void xgene_enet_get_stats64(
 			struct net_device *ndev,
 			struct rtnl_link_stats64 *storage)
 {
@@ -1466,7 +1459,6 @@ static struct rtnl_link_stats64 *xgene_enet_get_stats64(
 	struct xgene_enet_desc_ring *ring;
 	int i;
 
-	memset(stats, 0, sizeof(struct rtnl_link_stats64));
 	for (i = 0; i < pdata->txq_cnt; i++) {
 		ring = pdata->tx_ring[i];
 		if (ring) {
@@ -1488,8 +1480,6 @@ static struct rtnl_link_stats64 *xgene_enet_get_stats64(
 		}
 	}
 	memcpy(storage, stats, sizeof(struct rtnl_link_stats64));
-
-	return storage;
 }
 
 static int xgene_enet_set_mac_address(struct net_device *ndev, void *addr)
@@ -1763,6 +1753,12 @@ static int xgene_enet_get_resources(struct xgene_enet_pdata *pdata)
 
 	pdata->clk = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(pdata->clk)) {
+		/* Abort if the clock is defined but couldn't be retrived.
+		 * Always abort if the clock is missing on DT system as
+		 * the driver can't cope with this case.
+		 */
+		if (PTR_ERR(pdata->clk) != -ENOENT || dev->of_node)
+			return PTR_ERR(pdata->clk);
 		/* Firmware may have set up the clock already. */
 		dev_info(dev, "clocks have been setup already\n");
 	}

@@ -9,6 +9,7 @@
  * read-modify-written (HW_TRIG_EN) instead of overwritten.
  */
 #include <linux/boot_checkpoint.h>
+#include <linux/sched/debug.h>
 #include <linux/delay.h>
 #include <linux/font.h>
 #include <linux/io.h>

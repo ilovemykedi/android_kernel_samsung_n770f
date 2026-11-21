@@ -30,6 +30,8 @@
 #include <linux/spinlock.h>
 #include <linux/types.h>
 #include <linux/uaccess.h>
+#include <linux/sched/signal.h>
+#include <linux/sched/task.h>
 #include <sdp/sdp_mm.h>
 
 #define SDP_MM_DEV	"sdp_mm"

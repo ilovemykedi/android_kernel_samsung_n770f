@@ -145,6 +145,7 @@
 #define __attribute_const__	__attribute__((__const__))
 #define __maybe_unused		__attribute__((unused))
 #define __always_unused		__attribute__((unused))
+#define __mode(x)               __attribute__((mode(x)))
 
 /* gcc version specific checks */
 
@@ -225,10 +226,10 @@
 
 #ifdef CONFIG_STACK_VALIDATION
 #define annotate_unreachable() ({					\
-	asm("1:\t\n"							\
+	asm("%c0:\t\n"							\
 	    ".pushsection .discard.unreachable\t\n"			\
-	    ".long 1b\t\n"						\
-	    ".popsection\t\n");						\
+	    ".long %c0b - .\t\n"					\
+	    ".popsection\t\n" : : "i" (__LINE__));			\
 })
 #else
 #define annotate_unreachable()

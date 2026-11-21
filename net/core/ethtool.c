@@ -24,7 +24,7 @@
 #include <linux/vmalloc.h>
 #include <linux/slab.h>
 #include <linux/rtnetlink.h>
-#include <linux/sched.h>
+#include <linux/sched/signal.h>
 #include <linux/net.h>
 
 /*
@@ -102,7 +102,6 @@ static const char netdev_features_strings[NETDEV_FEATURE_COUNT][ETH_GSTRING_LEN]
 	[NETIF_F_RXFCS_BIT] =            "rx-fcs",
 	[NETIF_F_RXALL_BIT] =            "rx-all",
 	[NETIF_F_HW_L2FW_DOFFLOAD_BIT] = "l2-fwd-offload",
-	[NETIF_F_BUSY_POLL_BIT] =        "busy-poll",
 	[NETIF_F_HW_TC_BIT] =		 "hw-tc-offload",
 };
 
@@ -1820,11 +1819,14 @@ static int ethtool_get_strings(struct net_device *dev, void __user *useraddr)
 	ret = __ethtool_get_sset_count(dev, gstrings.string_set);
 	if (ret < 0)
 		return ret;
+	if (ret > S32_MAX / ETH_GSTRING_LEN)
+		return -ENOMEM;
+	WARN_ON_ONCE(!ret);
 
 	gstrings.len = ret;
 
 	if (gstrings.len) {
-		data = kcalloc(gstrings.len, ETH_GSTRING_LEN, GFP_USER);
+		data = vzalloc(gstrings.len * ETH_GSTRING_LEN);
 		if (!data)
 			return -ENOMEM;
 
@@ -1843,7 +1845,7 @@ static int ethtool_get_strings(struct net_device *dev, void __user *useraddr)
 	ret = 0;
 
 out:
-	kfree(data);
+	vfree(data);
 	return ret;
 }
 
@@ -1920,14 +1922,15 @@ static int ethtool_get_stats(struct net_device *dev, void __user *useraddr)
 	n_stats = ops->get_sset_count(dev, ETH_SS_STATS);
 	if (n_stats < 0)
 		return n_stats;
-	WARN_ON(n_stats == 0);
-
+	if (n_stats > S32_MAX / sizeof(u64))
+		return -ENOMEM;
+	WARN_ON_ONCE(!n_stats);
 	if (copy_from_user(&stats, useraddr, sizeof(stats)))
 		return -EFAULT;
 
 	stats.n_stats = n_stats;
 	if (n_stats) {
-		data = kmalloc(n_stats * sizeof(u64), GFP_USER);
+		data = vzalloc(n_stats * sizeof(u64));
 		if (!data)
 			return -ENOMEM;
 
@@ -1945,7 +1948,7 @@ static int ethtool_get_stats(struct net_device *dev, void __user *useraddr)
 	ret = 0;
 
  out:
-	kfree(data);
+	vfree(data);
 	return ret;
 }
 
@@ -1960,17 +1963,18 @@ static int ethtool_get_phy_stats(struct net_device *dev, void __user *useraddr)
 		return -EOPNOTSUPP;
 
 	n_stats = phy_get_sset_count(phydev);
-
 	if (n_stats < 0)
 		return n_stats;
-	WARN_ON(n_stats == 0);
+	if (n_stats > S32_MAX / sizeof(u64))
+		return -ENOMEM;
+	WARN_ON_ONCE(!n_stats);
 
 	if (copy_from_user(&stats, useraddr, sizeof(stats)))
 		return -EFAULT;
 
 	stats.n_stats = n_stats;
 	if (n_stats) {
-		data = kmalloc_array(n_stats, sizeof(u64), GFP_USER);
+		data = vzalloc(n_stats * sizeof(u64));
 		if (!data)
 			return -ENOMEM;
 
@@ -1990,7 +1994,7 @@ static int ethtool_get_phy_stats(struct net_device *dev, void __user *useraddr)
 	ret = 0;
 
  out:
-	kfree(data);
+	vfree(data);
 	return ret;
 }
 

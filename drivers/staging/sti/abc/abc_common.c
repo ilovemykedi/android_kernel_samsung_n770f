@@ -18,6 +18,7 @@
  *
  */
 #include <linux/sti/abc_common.h>
+#include <linux/sched/clock.h>
 
 #define DEBUG_ABC
 #define ABC_WARNING_REPORT

@@ -28,6 +28,7 @@
 #include <linux/videodev2_exynos_camera.h>
 #include <linux/v4l2-mediabus.h>
 #include <linux/bug.h>
+#include <uapi/linux/sched/types.h>
 
 #include "fimc-is-type.h"
 #include "fimc-is-core.h"

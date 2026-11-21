@@ -11,6 +11,7 @@
  */
 #ifdef CONFIG_SEC_DEBUG_EXTRA_INFO
 #include <linux/sec_debug.h>
+#include <linux/sched/clock.h>
 #endif
 
 #include "s5p_mfc_watchdog.h"

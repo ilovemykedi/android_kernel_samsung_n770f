@@ -9,6 +9,9 @@
 #include <linux/notifier.h>
 #include <linux/sched.h>
 #include <linux/sched/smt.h>
+#include <linux/sched/signal.h>
+#include <linux/sched/hotplug.h>
+#include <linux/sched/task.h>
 #include <linux/unistd.h>
 #include <linux/cpu.h>
 #include <linux/oom.h>
@@ -2004,14 +2007,13 @@ int __cpuhp_state_add_instance(enum cpuhp_state state, struct hlist_node *node,
 		if (ret) {
 			if (sp->teardown.multi)
 				cpuhp_rollback_install(cpu, state, node);
-			goto err;
+			goto unlock;
 		}
 	}
 add_node:
 	ret = 0;
 	hlist_add_head(node, &sp->list);
-
-err:
+unlock:
 	mutex_unlock(&cpuhp_state_mutex);
 	put_online_cpus();
 	return ret;
@@ -2131,6 +2133,7 @@ remove:
 	return 0;
 }
 EXPORT_SYMBOL_GPL(__cpuhp_state_remove_instance);
+
 /**
  * __cpuhp_remove_state - Remove the callbacks for an hotplug machine state
  * @state:	The state to remove
@@ -2150,6 +2153,7 @@ void __cpuhp_remove_state(enum cpuhp_state state, bool invoke)
 	get_online_cpus();
 	mutex_lock(&cpuhp_state_mutex);
 
+	mutex_lock(&cpuhp_state_mutex);
 	if (sp->multi_instance) {
 		WARN(!hlist_empty(&sp->list),
 		     "Error: Removing state %d which has instances left.\n",

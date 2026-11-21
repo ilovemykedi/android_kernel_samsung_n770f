@@ -132,4 +132,6 @@ config PCI_HYPERV
           PCI devices from a PCI backend to support PCI driver domains.
 
 source "drivers/pci/hotplug/Kconfig"
+# drivers/pci/dwc (v4.11 DesignWare split) not used: Samsung pci-exynos
+# builds against drivers/pci/host/pcie-designware.c
 source "drivers/pci/host/Kconfig"

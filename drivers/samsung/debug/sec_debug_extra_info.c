@@ -23,6 +23,7 @@
 
 #include <soc/samsung/exynos-pmu.h>
 #include <linux/sec_ext.h>
+#include <linux/sched/clock.h>
 
 #define SDEI_DEBUG	(0)
 #define EXTRA_VERSION	"RI25"

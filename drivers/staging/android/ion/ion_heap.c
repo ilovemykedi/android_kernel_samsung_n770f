@@ -20,6 +20,7 @@
 #include <linux/mm.h>
 #include <linux/rtmutex.h>
 #include <linux/sched.h>
+#include <uapi/linux/sched/types.h>
 #include <linux/scatterlist.h>
 #include <linux/vmalloc.h>
 #include <linux/highmem.h>
@@ -178,7 +179,7 @@ void ion_heap_unmap_kernel(struct ion_heap *heap,
 				buffer->task_comm, buffer->pid,
 				buffer->thread_comm,
 				buffer->tid, buffer->size, buffer->kmap_cnt,
-				atomic_read(&buffer->ref.refcount),
+				kref_read(&buffer->ref),
 				buffer->handle_count, master_name,
 				buffer->flags);
 		pr_cont("(");

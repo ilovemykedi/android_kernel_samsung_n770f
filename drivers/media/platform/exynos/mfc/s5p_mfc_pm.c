@@ -13,6 +13,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/clk.h>
 #include <linux/smc.h>
+#include <linux/sched/clock.h>
 
 #include "s5p_mfc_pm.h"
 

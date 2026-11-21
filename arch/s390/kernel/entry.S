@@ -24,7 +24,6 @@
 #include <asm/setup.h>
 #include <asm/nmi.h>
 #include <asm/export.h>
-#include <asm/nospec-insn.h>
 
 __PT_R0      =	__PT_GPRS
 __PT_R1      =	__PT_GPRS + 8
@@ -51,7 +50,8 @@ _TIF_WORK	= (_TIF_SIGPENDING | _TIF_NOTIFY_RESUME | _TIF_NEED_RESCHED | \
 		   _TIF_UPROBE)
 _TIF_TRACE	= (_TIF_SYSCALL_TRACE | _TIF_SYSCALL_AUDIT | _TIF_SECCOMP | \
 		   _TIF_SYSCALL_TRACEPOINT)
-_CIF_WORK	= (_CIF_MCCK_PENDING | _CIF_ASCE | _CIF_FPU)
+_CIF_WORK	= (_CIF_MCCK_PENDING | _CIF_ASCE_PRIMARY | \
+		   _CIF_ASCE_SECONDARY | _CIF_FPU)
 _PIF_WORK	= (_PIF_PER_TRAP)
 
 #define BASED(name) name-cleanup_critical(%r13)
@@ -104,9 +104,7 @@ _PIF_WORK	= (_PIF_PER_TRAP)
 	CHECK_STACK 1<<STACK_SHIFT,\savearea
 	aghi	%r15,-(STACK_FRAME_OVERHEAD + __PT_SIZE)
 	j	3f
-1:	LAST_BREAK %r14
-	UPDATE_VTIME %r14,%r15,\timer
-	BPENTER __TI_flags(%r12),_TIF_ISOLATE_BP
+1:	UPDATE_VTIME %r14,%r15,\timer
 2:	lg	%r15,__LC_ASYNC_STACK	# load async stack
 3:	la	%r11,STACK_FRAME_OVERHEAD(%r15)
 	.endm
@@ -121,18 +119,6 @@ _PIF_WORK	= (_PIF_PER_TRAP)
 	stg	\w1,__LC_USER_TIMER
 	stg	\w2,__LC_SYSTEM_TIMER
 	mvc	__LC_LAST_UPDATE_TIMER(8),\enter_timer
-	.endm
-
-	.macro	LAST_BREAK scratch
-	srag	\scratch,%r10,23
-#ifdef CONFIG_HAVE_MARCH_Z990_FEATURES
-	jz	.+10
-	stg	%r10,__TASK_thread+__THREAD_last_break(%r12)
-#else
-	jz	.+14
-	lghi	\scratch,__TASK_thread
-	stg	%r10,__THREAD_last_break(\scratch,%r12)
-#endif
 	.endm
 
 	.macro REENABLE_IRQS
@@ -171,72 +157,6 @@ _PIF_WORK	= (_PIF_PER_TRAP)
 		tm	off+\addr, \mask
 	.endm
 
-	.macro BPOFF
-	.pushsection .altinstr_replacement, "ax"
-660:	.long	0xb2e8c000
-	.popsection
-661:	.long	0x47000000
-	.pushsection .altinstructions, "a"
-	.long 661b - .
-	.long 660b - .
-	.word 82
-	.byte 4
-	.byte 4
-	.popsection
-	.endm
-
-	.macro BPON
-	.pushsection .altinstr_replacement, "ax"
-662:	.long	0xb2e8d000
-	.popsection
-663:	.long	0x47000000
-	.pushsection .altinstructions, "a"
-	.long 663b - .
-	.long 662b - .
-	.word 82
-	.byte 4
-	.byte 4
-	.popsection
-	.endm
-
-	.macro BPENTER tif_ptr,tif_mask
-	.pushsection .altinstr_replacement, "ax"
-662:	.word	0xc004, 0x0000, 0x0000	# 6 byte nop
-	.word	0xc004, 0x0000, 0x0000	# 6 byte nop
-	.popsection
-664:	TSTMSK	\tif_ptr,\tif_mask
-	jz	. + 8
-	.long	0xb2e8d000
-	.pushsection .altinstructions, "a"
-	.long 664b - .
-	.long 662b - .
-	.word 82
-	.byte 12
-	.byte 12
-	.popsection
-	.endm
-
-	.macro BPEXIT tif_ptr,tif_mask
-	TSTMSK	\tif_ptr,\tif_mask
-	.pushsection .altinstr_replacement, "ax"
-662:	jnz	. + 8
-	.long	0xb2e8d000
-	.popsection
-664:	jz	. + 8
-	.long	0xb2e8c000
-	.pushsection .altinstructions, "a"
-	.long 664b - .
-	.long 662b - .
-	.word 82
-	.byte 8
-	.byte 8
-	.popsection
-	.endm
-
-	GEN_BR_THUNK %r9
-	GEN_BR_THUNK %r14
-	GEN_BR_THUNK %r14,%r11
-
 	.section .kprobes.text, "ax"
 .Ldummy:
 	/*
@@ -248,11 +168,6 @@ _PIF_WORK	= (_PIF_PER_TRAP)
 	 * again.
 	 */
 	nop	0
-
-ENTRY(__bpon)
-	.globl __bpon
-	BPON
-	BR_EX	%r14
 
 /*
  * Scheduler resume function, called by switch_to
@@ -279,9 +194,9 @@ ENTRY(__switch_to)
 	mvc	__LC_CURRENT_PID(4,%r0),__TASK_pid(%r3) # store pid of next
 	lmg	%r6,%r15,__SF_GPRS(%r15)	# load gprs of next task
 	TSTMSK	__LC_MACHINE_FLAGS,MACHINE_FLAG_LPP
-	jz	0f
+	bzr	%r14
 	.insn	s,0xb2800000,__LC_LPP		# set program parameter
-0:	BR_EX	%r14
+	br	%r14
 
 .L__critical_start:
 
@@ -293,11 +208,9 @@ ENTRY(__switch_to)
  */
 ENTRY(sie64a)
 	stmg	%r6,%r14,__SF_GPRS(%r15)	# save kernel registers
-	lg	%r12,__LC_CURRENT
 	stg	%r2,__SF_EMPTY(%r15)		# save control block pointer
 	stg	%r3,__SF_EMPTY+8(%r15)		# save guest register save area
 	xc	__SF_EMPTY+16(8,%r15),__SF_EMPTY+16(%r15) # reason code = 0
-	mvc	__SF_EMPTY+24(8,%r15),__TI_flags(%r12) # copy thread flags
 	TSTMSK	__LC_CPU_FLAGS,_CIF_FPU		# load guest fp/vx registers ?
 	jno	.Lsie_load_guest_gprs
 	brasl	%r14,load_fpu_regs		# load guest fp/vx regs
@@ -314,48 +227,31 @@ ENTRY(sie64a)
 	jnz	.Lsie_skip
 	TSTMSK	__LC_CPU_FLAGS,_CIF_FPU
 	jo	.Lsie_skip			# exit if fp/vx regs changed
-	BPEXIT	__SF_EMPTY+24(%r15),(_TIF_ISOLATE_BP|_TIF_ISOLATE_BP_GUEST)
 	sie	0(%r14)
-.Lsie_exit:
-	BPOFF
-	BPENTER	__SF_EMPTY+24(%r15),(_TIF_ISOLATE_BP|_TIF_ISOLATE_BP_GUEST)
 .Lsie_skip:
 	ni	__SIE_PROG0C+3(%r14),0xfe	# no longer in SIE
 	lctlg	%c1,%c1,__LC_USER_ASCE		# load primary asce
 .Lsie_done:
 # some program checks are suppressing. C code (e.g. do_protection_exception)
-# will rewind the PSW by the ILC, which is often 4 bytes in case of SIE. There
-# are some corner cases (e.g. runtime instrumentation) where ILC is unpredictable.
-# Other instructions between sie64a and .Lsie_done should not cause program
-# interrupts. So lets use 3 nops as a landing pad for all possible rewinds.
+# will rewind the PSW by the ILC, which is 4 bytes in case of SIE. Other
+# instructions between sie64a and .Lsie_done should not cause program
+# interrupts. So lets use a nop (47 00 00 00) as a landing pad.
 # See also .Lcleanup_sie
-.Lrewind_pad6:
-	nopr	7
-.Lrewind_pad4:
-	nopr	7
-.Lrewind_pad2:
-	nopr	7
+.Lrewind_pad:
+	nop	0
 	.globl sie_exit
 sie_exit:
 	lg	%r14,__SF_EMPTY+8(%r15)		# load guest register save area
 	stmg	%r0,%r13,0(%r14)		# save guest gprs 0-13
-	xgr	%r0,%r0				# clear guest registers to
-	xgr	%r1,%r1				# prevent speculative use
-	xgr	%r2,%r2
-	xgr	%r3,%r3
-	xgr	%r4,%r4
-	xgr	%r5,%r5
 	lmg	%r6,%r14,__SF_GPRS(%r15)	# restore kernel registers
 	lg	%r2,__SF_EMPTY+16(%r15)		# return exit reason code
-	BR_EX	%r14
+	br	%r14
 .Lsie_fault:
 	lghi	%r14,-EFAULT
 	stg	%r14,__SF_EMPTY+16(%r15)	# set exit reason code
 	j	sie_exit
 
-	EX_TABLE(.Lrewind_pad6,.Lsie_fault)
-	EX_TABLE(.Lrewind_pad4,.Lsie_fault)
-	EX_TABLE(.Lrewind_pad2,.Lsie_fault)
+	EX_TABLE(.Lrewind_pad,.Lsie_fault)
 	EX_TABLE(sie_exit,.Lsie_fault)
 EXPORT_SYMBOL(sie64a)
 EXPORT_SYMBOL(sie_exit)
@@ -370,17 +266,14 @@ ENTRY(system_call)
 	stpt	__LC_SYNC_ENTER_TIMER
 .Lsysc_stmg:
 	stmg	%r8,%r15,__LC_SAVE_AREA_SYNC
-	BPOFF
-	lg	%r10,__LC_LAST_BREAK
 	lg	%r12,__LC_CURRENT
+	lghi	%r13,__TASK_thread
 	lghi	%r14,_PIF_SYSCALL
 .Lsysc_per:
 	lg	%r15,__LC_KERNEL_STACK
 	la	%r11,STACK_FRAME_OVERHEAD(%r15)	# pointer to pt_regs
-	LAST_BREAK %r13
 .Lsysc_vtime:
-	UPDATE_VTIME %r10,%r13,__LC_SYNC_ENTER_TIMER
-	BPENTER __TI_flags(%r12),_TIF_ISOLATE_BP
+	UPDATE_VTIME %r8,%r9,__LC_SYNC_ENTER_TIMER
 	stmg	%r0,%r7,__PT_R0(%r11)
 	mvc	__PT_R8(64,%r11),__LC_SAVE_AREA_SYNC
 	mvc	__PT_PSW(16,%r11),__LC_SVC_OLD_PSW
@@ -388,12 +281,7 @@ ENTRY(system_call)
 	stg	%r14,__PT_FLAGS(%r11)
 .Lsysc_do_svc:
 	# load address of system call table
-#ifdef CONFIG_HAVE_MARCH_Z990_FEATURES
-	lg	%r10,__TASK_thread+__THREAD_sysc_table(%r12)
-#else
-	lghi	%r13,__TASK_thread
 	lg	%r10,__THREAD_sysc_table(%r13,%r12)
-#endif
 	llgh	%r8,__PT_INT_CODE+2(%r11)
 	slag	%r8,%r8,2			# shift and test for svc 0
 	jnz	.Lsysc_nr_ok
@@ -410,7 +298,7 @@ ENTRY(system_call)
 	lgf	%r9,0(%r8,%r10)			# get system call add.
 	TSTMSK	__TI_flags(%r12),_TIF_TRACE
 	jnz	.Lsysc_tracesys
-	BASR_EX	%r14,%r9			# call sys_xxxx
+	basr	%r14,%r9			# call sys_xxxx
 	stg	%r2,__PT_R2(%r11)		# store return value
 
 .Lsysc_return:
@@ -422,12 +310,10 @@ ENTRY(system_call)
 	jnz	.Lsysc_work			# check for work
 	TSTMSK	__LC_CPU_FLAGS,_CIF_WORK
 	jnz	.Lsysc_work
-	BPEXIT	__TI_flags(%r12),_TIF_ISOLATE_BP
 .Lsysc_restore:
 	lg	%r14,__LC_VDSO_PER_CPU
 	lmg	%r0,%r10,__PT_R0(%r11)
 	mvc	__LC_RETURN_PSW(16),__PT_PSW(%r11)
-.Lsysc_exit_timer:
 	stpt	__LC_EXIT_TIMER
 	mvc	__VDSO_ECTG_BASE(16,%r14),__LC_EXIT_TIMER
 	lmg	%r11,%r15,__PT_R11(%r11)
@@ -454,8 +340,8 @@ ENTRY(system_call)
 	jo	.Lsysc_notify_resume
 	TSTMSK	__LC_CPU_FLAGS,_CIF_FPU
 	jo	.Lsysc_vxrs
-	TSTMSK	__LC_CPU_FLAGS,_CIF_ASCE
-	jo	.Lsysc_uaccess
+	TSTMSK	__LC_CPU_FLAGS,(_CIF_ASCE_PRIMARY|_CIF_ASCE_SECONDARY)
+	jnz	.Lsysc_asce
 	j	.Lsysc_return		# beware of critical section cleanup
 
 #
@@ -473,12 +359,15 @@ ENTRY(system_call)
 	jg	s390_handle_mcck	# TIF bit will be cleared by handler
 
 #
-# _CIF_ASCE is set, load user space asce
+# _CIF_ASCE_PRIMARY and/or CIF_ASCE_SECONDARY set, load user space asce
 #
-.Lsysc_uaccess:
-	ni	__LC_CPU_FLAGS+7,255-_CIF_ASCE
+.Lsysc_asce:
+	ni	__LC_CPU_FLAGS+7,255-_CIF_ASCE_PRIMARY
 	lctlg	%c1,%c1,__LC_USER_ASCE		# load primary asce
-	j	.Lsysc_return
+	TSTMSK	__LC_CPU_FLAGS,_CIF_ASCE_SECONDARY
+	jz	.Lsysc_return
+	larl	%r14,.Lsysc_return
+	jg	set_fs_fixup
 
 #
 # CIF_FPU is set, restore floating-point controls and floating-point registers.
@@ -495,13 +384,11 @@ ENTRY(system_call)
 	brasl	%r14,do_signal
 	TSTMSK	__PT_FLAGS(%r11),_PIF_SYSCALL
 	jno	.Lsysc_return
+.Lsysc_do_syscall:
+	lghi	%r13,__TASK_thread
 	lmg	%r2,%r7,__PT_R2(%r11)	# load svc arguments
-	lghi	%r8,0			# svc 0 returns -ENOSYS
-	llgh	%r1,__PT_INT_CODE+2(%r11)	# load new svc number
-	cghi	%r1,NR_syscalls
-	jnl	.Lsysc_nr_ok		# invalid svc number -> do svc 0
-	slag	%r8,%r1,2
-	j	.Lsysc_nr_ok		# restart svc
+	lghi	%r1,0			# svc 0 returns -ENOSYS
+	j	.Lsysc_do_svc
 
 #
 # _TIF_NOTIFY_RESUME is set, call do_notify_resume
@@ -549,7 +436,7 @@ ENTRY(system_call)
 	lmg	%r3,%r7,__PT_R3(%r11)
 	stg	%r7,STACK_FRAME_OVERHEAD(%r15)
 	lg	%r2,__PT_ORIG_GPR2(%r11)
-	BASR_EX	%r14,%r9		# call sys_xxx
+	basr	%r14,%r9		# call sys_xxx
 	stg	%r2,__PT_R2(%r11)	# store return value
 .Lsysc_tracenogo:
 	TSTMSK	__TI_flags(%r12),_TIF_TRACE
@@ -573,7 +460,7 @@ ENTRY(ret_from_fork)
 	lmg	%r9,%r10,__PT_R9(%r11)	# load gprs
 ENTRY(kernel_thread_starter)
 	la	%r2,0(%r10)
-	BASR_EX	%r14,%r9
+	basr	%r14,%r9
 	j	.Lsysc_tracenogo
 
 /*
@@ -582,7 +469,6 @@ ENTRY(kernel_thread_starter)
 
 ENTRY(pgm_check_handler)
 	stpt	__LC_SYNC_ENTER_TIMER
-	BPOFF
 	stmg	%r8,%r15,__LC_SAVE_AREA_SYNC
 	lg	%r10,__LC_LAST_BREAK
 	lg	%r12,__LC_CURRENT
@@ -604,10 +490,8 @@ ENTRY(pgm_check_handler)
 	jnz	.Lpgm_svcper		# -> single stepped svc
 1:	CHECK_STACK STACK_SIZE,__LC_SAVE_AREA_SYNC
 	aghi	%r15,-(STACK_FRAME_OVERHEAD + __PT_SIZE)
-	j	3f
-2:	LAST_BREAK %r14
-	UPDATE_VTIME %r14,%r15,__LC_SYNC_ENTER_TIMER
-	BPENTER __TI_flags(%r12),_TIF_ISOLATE_BP
+	j	4f
+2:	UPDATE_VTIME %r14,%r15,__LC_SYNC_ENTER_TIMER
 	lg	%r15,__LC_KERNEL_STACK
 	lgr	%r14,%r12
 	aghi	%r14,__TASK_thread	# pointer to thread_struct
@@ -615,17 +499,9 @@ ENTRY(pgm_check_handler)
 	tm	__LC_PGM_ILC+2,0x02	# check for transaction abort
 	jz	3f
 	mvc	__THREAD_trap_tdb(256,%r14),0(%r13)
-3:	la	%r11,STACK_FRAME_OVERHEAD(%r15)
+3:	stg	%r10,__THREAD_last_break(%r14)
+4:	la	%r11,STACK_FRAME_OVERHEAD(%r15)
 	stmg	%r0,%r7,__PT_R0(%r11)
-	# clear user controlled registers to prevent speculative use
-	xgr	%r0,%r0
-	xgr	%r1,%r1
-	xgr	%r2,%r2
-	xgr	%r3,%r3
-	xgr	%r4,%r4
-	xgr	%r5,%r5
-	xgr	%r6,%r6
-	xgr	%r7,%r7
 	mvc	__PT_R8(64,%r11),__LC_SAVE_AREA_SYNC
 	stmg	%r8,%r9,__PT_PSW(%r11)
 	mvc	__PT_INT_CODE(4,%r11),__LC_PGM_ILC
@@ -633,27 +509,29 @@ ENTRY(pgm_check_handler)
 	xc	__PT_FLAGS(8,%r11),__PT_FLAGS(%r11)
 	stg	%r10,__PT_ARGS(%r11)
 	tm	__LC_PGM_ILC+3,0x80	# check for per exception
-	jz	4f
+	jz	5f
 	tmhh	%r8,0x0001		# kernel per event ?
 	jz	.Lpgm_kprobe
 	oi	__PT_FLAGS+7(%r11),_PIF_PER_TRAP
 	mvc	__THREAD_per_address(8,%r14),__LC_PER_ADDRESS
 	mvc	__THREAD_per_cause(2,%r14),__LC_PER_CODE
 	mvc	__THREAD_per_paid(1,%r14),__LC_PER_ACCESS_ID
-4:	REENABLE_IRQS
+5:	REENABLE_IRQS
 	xc	__SF_BACKCHAIN(8,%r15),__SF_BACKCHAIN(%r15)
 	larl	%r1,pgm_check_table
 	llgh	%r10,__PT_INT_CODE+2(%r11)
 	nill	%r10,0x007f
 	sll	%r10,2
 	je	.Lpgm_return
-	lgf	%r9,0(%r10,%r1)		# load address of handler routine
+	lgf	%r1,0(%r10,%r1)		# load address of handler routine
 	lgr	%r2,%r11		# pass pointer to pt_regs
-	BASR_EX	%r14,%r9		# branch to interrupt-handler
+	basr	%r14,%r1		# branch to interrupt-handler
 .Lpgm_return:
 	LOCKDEP_SYS_EXIT
 	tm	__PT_PSW+1(%r11),0x01	# returning to user ?
 	jno	.Lsysc_restore
+	TSTMSK	__PT_FLAGS(%r11),_PIF_SYSCALL
+	jo	.Lsysc_do_syscall
 	j	.Lsysc_tif
 
 #
@@ -671,6 +549,7 @@ ENTRY(pgm_check_handler)
 #
 .Lpgm_svcper:
 	mvc	__LC_RETURN_PSW(8),__LC_SVC_NEW_PSW
+	lghi	%r13,__TASK_thread
 	larl	%r14,.Lsysc_per
 	stg	%r14,__LC_RETURN_PSW+8
 	lghi	%r14,_PIF_SYSCALL | _PIF_PER_TRAP
@@ -682,24 +561,12 @@ ENTRY(pgm_check_handler)
 ENTRY(io_int_handler)
 	STCK	__LC_INT_CLOCK
 	stpt	__LC_ASYNC_ENTER_TIMER
-	BPOFF
 	stmg	%r8,%r15,__LC_SAVE_AREA_ASYNC
-	lg	%r10,__LC_LAST_BREAK
 	lg	%r12,__LC_CURRENT
 	larl	%r13,cleanup_critical
 	lmg	%r8,%r9,__LC_IO_OLD_PSW
 	SWITCH_ASYNC __LC_SAVE_AREA_ASYNC,__LC_ASYNC_ENTER_TIMER
 	stmg	%r0,%r7,__PT_R0(%r11)
-	# clear user controlled registers to prevent speculative use
-	xgr	%r0,%r0
-	xgr	%r1,%r1
-	xgr	%r2,%r2
-	xgr	%r3,%r3
-	xgr	%r4,%r4
-	xgr	%r5,%r5
-	xgr	%r6,%r6
-	xgr	%r7,%r7
-	xgr	%r10,%r10
 	mvc	__PT_R8(64,%r11),__LC_SAVE_AREA_ASYNC
 	stmg	%r8,%r9,__PT_PSW(%r11)
 	mvc	__PT_INT_CODE(12,%r11),__LC_SUBCHANNEL_ID
@@ -734,13 +601,8 @@ ENTRY(io_int_handler)
 	lg	%r14,__LC_VDSO_PER_CPU
 	lmg	%r0,%r10,__PT_R0(%r11)
 	mvc	__LC_RETURN_PSW(16),__PT_PSW(%r11)
-	tm	__PT_PSW+1(%r11),0x01	# returning to user ?
-	jno	.Lio_exit_kernel
-	BPEXIT	__TI_flags(%r12),_TIF_ISOLATE_BP
-.Lio_exit_timer:
 	stpt	__LC_EXIT_TIMER
 	mvc	__VDSO_ECTG_BASE(16,%r14),__LC_EXIT_TIMER
-.Lio_exit_kernel:
 	lmg	%r11,%r15,__PT_R11(%r11)
 	lpswe	__LC_RETURN_PSW
 .Lio_done:
@@ -803,8 +665,8 @@ ENTRY(io_int_handler)
 	jo	.Lio_notify_resume
 	TSTMSK	__LC_CPU_FLAGS,_CIF_FPU
 	jo	.Lio_vxrs
-	TSTMSK	__LC_CPU_FLAGS,_CIF_ASCE
-	jo	.Lio_uaccess
+	TSTMSK	__LC_CPU_FLAGS,(_CIF_ASCE_PRIMARY|_CIF_ASCE_SECONDARY)
+	jnz	.Lio_asce
 	j	.Lio_return		# beware of critical section cleanup
 
 #
@@ -817,12 +679,15 @@ ENTRY(io_int_handler)
 	j	.Lio_return
 
 #
-# _CIF_ASCE is set, load user space asce
+# _CIF_ASCE_PRIMARY and/or CIF_ASCE_SECONDARY set, load user space asce
 #
-.Lio_uaccess:
-	ni	__LC_CPU_FLAGS+7,255-_CIF_ASCE
+.Lio_asce:
+	ni	__LC_CPU_FLAGS+7,255-_CIF_ASCE_PRIMARY
 	lctlg	%c1,%c1,__LC_USER_ASCE		# load primary asce
-	j	.Lio_return
+	TSTMSK	__LC_CPU_FLAGS,_CIF_ASCE_SECONDARY
+	jz	.Lio_return
+	larl	%r14,.Lio_return
+	jg	set_fs_fixup
 
 #
 # CIF_FPU is set, restore floating-point controls and floating-point registers.
@@ -872,24 +737,12 @@ ENTRY(io_int_handler)
 ENTRY(ext_int_handler)
 	STCK	__LC_INT_CLOCK
 	stpt	__LC_ASYNC_ENTER_TIMER
-	BPOFF
 	stmg	%r8,%r15,__LC_SAVE_AREA_ASYNC
-	lg	%r10,__LC_LAST_BREAK
 	lg	%r12,__LC_CURRENT
 	larl	%r13,cleanup_critical
 	lmg	%r8,%r9,__LC_EXT_OLD_PSW
 	SWITCH_ASYNC __LC_SAVE_AREA_ASYNC,__LC_ASYNC_ENTER_TIMER
 	stmg	%r0,%r7,__PT_R0(%r11)
-	# clear user controlled registers to prevent speculative use
-	xgr	%r0,%r0
-	xgr	%r1,%r1
-	xgr	%r2,%r2
-	xgr	%r3,%r3
-	xgr	%r4,%r4
-	xgr	%r5,%r5
-	xgr	%r6,%r6
-	xgr	%r7,%r7
-	xgr	%r10,%r10
 	mvc	__PT_R8(64,%r11),__LC_SAVE_AREA_ASYNC
 	stmg	%r8,%r9,__PT_PSW(%r11)
 	lghi	%r1,__LC_EXT_PARAMS2
@@ -922,12 +775,11 @@ ENTRY(psw_idle)
 .Lpsw_idle_stcctm:
 #endif
 	oi	__LC_CPU_FLAGS+7,_CIF_ENABLED_WAIT
-	BPON
 	STCK	__CLOCK_IDLE_ENTER(%r2)
 	stpt	__TIMER_IDLE_ENTER(%r2)
 .Lpsw_idle_lpsw:
 	lpswe	__SF_EMPTY(%r15)
-	BR_EX	%r14
+	br	%r14
 .Lpsw_idle_end:
 
 /*
@@ -941,7 +793,7 @@ ENTRY(save_fpu_regs)
 	lg	%r2,__LC_CURRENT
 	aghi	%r2,__TASK_thread
 	TSTMSK	__LC_CPU_FLAGS,_CIF_FPU
-	jo	.Lsave_fpu_regs_exit
+	bor	%r14
 	stfpc	__THREAD_FPU_fpc(%r2)
 	lg	%r3,__THREAD_FPU_regs(%r2)
 	TSTMSK	__LC_MACHINE_FLAGS,MACHINE_FLAG_VX
@@ -968,8 +820,7 @@ ENTRY(save_fpu_regs)
 	std	15,120(%r3)
 .Lsave_fpu_regs_done:
 	oi	__LC_CPU_FLAGS+7,_CIF_FPU
-.Lsave_fpu_regs_exit:
-	BR_EX	%r14
+	br	%r14
 .Lsave_fpu_regs_end:
 #if IS_ENABLED(CONFIG_KVM)
 EXPORT_SYMBOL(save_fpu_regs)
@@ -989,7 +840,7 @@ load_fpu_regs:
 	lg	%r4,__LC_CURRENT
 	aghi	%r4,__TASK_thread
 	TSTMSK	__LC_CPU_FLAGS,_CIF_FPU
-	jno	.Lload_fpu_regs_exit
+	bnor	%r14
 	lfpc	__THREAD_FPU_fpc(%r4)
 	TSTMSK	__LC_MACHINE_FLAGS,MACHINE_FLAG_VX
 	lg	%r4,__THREAD_FPU_regs(%r4)	# %r4 <- reg save area
@@ -1016,8 +867,7 @@ load_fpu_regs:
 	ld	15,120(%r4)
 .Lload_fpu_regs_done:
 	ni	__LC_CPU_FLAGS+7,255-_CIF_FPU
-.Lload_fpu_regs_exit:
-	BR_EX	%r14
+	br	%r14
 .Lload_fpu_regs_end:
 
 .L__critical_end:
@@ -1027,11 +877,9 @@ load_fpu_regs:
  */
 ENTRY(mcck_int_handler)
 	STCK	__LC_MCCK_CLOCK
-	BPOFF
 	la	%r1,4095		# revalidate r1
 	spt	__LC_CPU_TIMER_SAVE_AREA-4095(%r1)	# revalidate cpu timer
 	lmg	%r0,%r15,__LC_GPREGS_SAVE_AREA-4095(%r1)# revalidate gprs
-	lg	%r10,__LC_LAST_BREAK
 	lg	%r12,__LC_CURRENT
 	larl	%r13,cleanup_critical
 	lmg	%r8,%r9,__LC_MCK_OLD_PSW
@@ -1059,16 +907,6 @@ ENTRY(mcck_int_handler)
 .Lmcck_skip:
 	lghi	%r14,__LC_GPREGS_SAVE_AREA+64
 	stmg	%r0,%r7,__PT_R0(%r11)
-	# clear user controlled registers to prevent speculative use
-	xgr	%r0,%r0
-	xgr	%r1,%r1
-	xgr	%r2,%r2
-	xgr	%r3,%r3
-	xgr	%r4,%r4
-	xgr	%r5,%r5
-	xgr	%r6,%r6
-	xgr	%r7,%r7
-	xgr	%r10,%r10
 	mvc	__PT_R8(64,%r11),0(%r14)
 	stmg	%r8,%r9,__PT_PSW(%r11)
 	xc	__PT_FLAGS(8,%r11),__PT_FLAGS(%r11)
@@ -1094,7 +932,6 @@ ENTRY(mcck_int_handler)
 	mvc	__LC_RETURN_MCCK_PSW(16),__PT_PSW(%r11) # move return PSW
 	tm	__LC_RETURN_MCCK_PSW+1,0x01 # returning to user ?
 	jno	0f
-	BPEXIT	__TI_flags(%r12),_TIF_ISOLATE_BP
 	stpt	__LC_EXIT_TIMER
 	mvc	__VDSO_ECTG_BASE(16,%r14),__LC_EXIT_TIMER
 0:	lmg	%r11,%r15,__PT_R11(%r11)
@@ -1190,7 +1027,7 @@ cleanup_critical:
 	jl	0f
 	clg	%r9,BASED(.Lcleanup_table+104)	# .Lload_fpu_regs_end
 	jl	.Lcleanup_load_fpu_regs
-0:	BR_EX	%r14,%r11
+0:	br	%r14
 
 	.align	8
 .Lcleanup_table:
@@ -1215,12 +1052,11 @@ cleanup_critical:
 	.quad	.Lsie_done
 
 .Lcleanup_sie:
-	BPENTER __SF_EMPTY+24(%r15),(_TIF_ISOLATE_BP|_TIF_ISOLATE_BP_GUEST)
 	lg	%r9,__SF_EMPTY(%r15)		# get control block pointer
 	ni	__SIE_PROG0C+3(%r9),0xfe	# no longer in SIE
 	lctlg	%c1,%c1,__LC_USER_ASCE		# load primary asce
 	larl	%r9,sie_exit			# skip forward to sie_exit
-	BR_EX	%r14,%r11
+	br	%r14
 #endif
 
 .Lcleanup_system_call:
@@ -1238,9 +1074,10 @@ cleanup_critical:
 0:	# check if base register setup + TIF bit load has been done
 	clg	%r9,BASED(.Lcleanup_system_call_insn+16)
 	jhe	0f
-	# set up saved registers r10 and r12
-	stg	%r10,16(%r11)		# r10 last break
-	stg	%r12,32(%r11)		# r12 task struct pointer
+	# set up saved register r12 task struct pointer
+	stg	%r12,32(%r11)
+	# set up saved register r13 __TASK_thread offset
+	mvc	40(8,%r11),BASED(.Lcleanup_system_call_const)
 0:	# check if the user time update has been done
 	clg	%r9,BASED(.Lcleanup_system_call_insn+24)
 	jh	0f
@@ -1257,14 +1094,7 @@ cleanup_critical:
 	stg	%r15,__LC_SYSTEM_TIMER
 0:	# update accounting time stamp
 	mvc	__LC_LAST_UPDATE_TIMER(8),__LC_SYNC_ENTER_TIMER
-	# do LAST_BREAK
-	lg	%r9,16(%r11)
-	srag	%r9,%r9,23
-	jz	0f
-	lgr	%r9,%r12
-	aghi	%r9,__TASK_thread
-	mvc	__THREAD_last_break(8,%r9),16(%r11)
-0:	# set up saved register r11
+	# set up saved register r11
 	lg	%r15,__LC_KERNEL_STACK
 	la	%r9,STACK_FRAME_OVERHEAD(%r15)
 	stg	%r9,24(%r11)		# r11 pt_regs pointer
@@ -1279,57 +1109,46 @@ cleanup_critical:
 	stg	%r15,56(%r11)		# r15 stack pointer
 	# set new psw address and exit
 	larl	%r9,.Lsysc_do_svc
-	BR_EX	%r14,%r11
+	br	%r14
 .Lcleanup_system_call_insn:
 	.quad	system_call
 	.quad	.Lsysc_stmg
 	.quad	.Lsysc_per
 	.quad	.Lsysc_vtime+36
 	.quad	.Lsysc_vtime+42
+.Lcleanup_system_call_const:
+	.quad	__TASK_thread
 
 .Lcleanup_sysc_tif:
 	larl	%r9,.Lsysc_tif
-	BR_EX	%r14,%r11
+	br	%r14
 
 .Lcleanup_sysc_restore:
-	# check if stpt has been executed
 	clg	%r9,BASED(.Lcleanup_sysc_restore_insn)
-	jh	0f
-	mvc	__LC_EXIT_TIMER(8),__LC_ASYNC_ENTER_TIMER
-	cghi	%r11,__LC_SAVE_AREA_ASYNC
 	je	0f
-	mvc	__LC_EXIT_TIMER(8),__LC_MCCK_ENTER_TIMER
-0:	clg	%r9,BASED(.Lcleanup_sysc_restore_insn+8)
-	je	1f
 	lg	%r9,24(%r11)		# get saved pointer to pt_regs
 	mvc	__LC_RETURN_PSW(16),__PT_PSW(%r9)
 	mvc	0(64,%r11),__PT_R8(%r9)
 	lmg	%r0,%r7,__PT_R0(%r9)
-1:	lmg	%r8,%r9,__LC_RETURN_PSW
-	BR_EX	%r14,%r11
+0:	lmg	%r8,%r9,__LC_RETURN_PSW
+	br	%r14
 .Lcleanup_sysc_restore_insn:
-	.quad	.Lsysc_exit_timer
 	.quad	.Lsysc_done - 4
 
 .Lcleanup_io_tif:
 	larl	%r9,.Lio_tif
-	BR_EX	%r14,%r11
+	br	%r14
 
 .Lcleanup_io_restore:
-	# check if stpt has been executed
 	clg	%r9,BASED(.Lcleanup_io_restore_insn)
-	jh	0f
-	mvc	__LC_EXIT_TIMER(8),__LC_MCCK_ENTER_TIMER
-0:	clg	%r9,BASED(.Lcleanup_io_restore_insn+8)
-	je	1f
+	je	0f
 	lg	%r9,24(%r11)		# get saved r11 pointer to pt_regs
 	mvc	__LC_RETURN_PSW(16),__PT_PSW(%r9)
 	mvc	0(64,%r11),__PT_R8(%r9)
 	lmg	%r0,%r7,__PT_R0(%r9)
-1:	lmg	%r8,%r9,__LC_RETURN_PSW
-	BR_EX	%r14,%r11
+0:	lmg	%r8,%r9,__LC_RETURN_PSW
+	br	%r14
 .Lcleanup_io_restore_insn:
-	.quad	.Lio_exit_timer
 	.quad	.Lio_done - 4
 
 .Lcleanup_idle:
@@ -1380,17 +1199,17 @@ cleanup_critical:
 	# prepare return psw
 	nihh	%r8,0xfcfd		# clear irq & wait state bits
 	lg	%r9,48(%r11)		# return from psw_idle
-	BR_EX	%r14,%r11
+	br	%r14
 .Lcleanup_idle_insn:
 	.quad	.Lpsw_idle_lpsw
 
 .Lcleanup_save_fpu_regs:
 	larl	%r9,save_fpu_regs
-	BR_EX	%r14,%r11
+	br	%r14
 
 .Lcleanup_load_fpu_regs:
 	larl	%r9,load_fpu_regs
-	BR_EX	%r14,%r11
+	br	%r14
 
 /*
  * Integer constants
@@ -1406,6 +1225,7 @@ cleanup_critical:
 .Lsie_critical_length:
 	.quad	.Lsie_done - .Lsie_gmap
 #endif
+
 	.section .rodata, "a"
 #define SYSCALL(esame,emu)	.long esame
 	.globl	sys_call_table

@@ -27,7 +27,7 @@ static unsigned long mm_debug_count(struct shrinker *s,
 	inactive_file = global_node_page_state(NR_INACTIVE_FILE);
 	active_file = global_node_page_state(NR_ACTIVE_FILE);
 	if ((inactive_file + active_file) < MB_TO_PAGES(MIN_FILE_SIZE)) {
-		show_mem(0);
+		show_mem(0, NULL);
 		dump_tasks(NULL, NULL);
 	}
 

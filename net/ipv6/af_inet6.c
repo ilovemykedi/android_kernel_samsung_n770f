@@ -327,7 +327,7 @@ int inet6_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len)
 		return -EINVAL;
 
 	snum = ntohs(addr->sin6_port);
-	if (snum && snum < PROT_SOCK &&
+	if (snum && snum < inet_prot_sock(net) &&
 	    !(bpf_flags & BIND_NO_CAP_NET_BIND_SERVICE) &&
 	    !ns_capable(net->user_ns, CAP_NET_BIND_SERVICE))
 		return -EACCES;
@@ -976,8 +976,6 @@ static int __init inet6_init(void)
 	if (err)
 		goto igmp_fail;
 
-	ipv6_stub = &ipv6_stub_impl;
-
 	err = ipv6_netfilter_init();
 	if (err)
 		goto netfilter_fail;
@@ -1053,6 +1051,10 @@ static int __init inet6_init(void)
 	if (err)
 		goto sysctl_fail;
 #endif
+
+	/* ensure that ipv6 stubs are visible only after ipv6 is ready */
+	wmb();
+	ipv6_stub = &ipv6_stub_impl;
 out:
 	return err;
 

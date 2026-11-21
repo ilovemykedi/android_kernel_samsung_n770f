@@ -17,8 +17,12 @@
 #include <linux/interrupt.h>
 #include <linux/kernel_stat.h>
 #include <linux/percpu.h>
+#include <linux/nmi.h>
 #include <linux/profile.h>
-#include <linux/sched.h>
+#include <linux/sched/signal.h>
+#include <linux/sched/clock.h>
+#include <linux/sched/stat.h>
+#include <linux/sched/nohz.h>
 #include <linux/module.h>
 #include <linux/irq_work.h>
 #include <linux/posix-timers.h>
@@ -1302,9 +1306,9 @@ void save_pcpu_tick(int cpu)
 {
 	saved_pcpu_ts[cpu] = per_cpu(tick_cpu_sched, cpu);
 	kcpustat_cpu(cpu).cpustat[CPUTIME_IDLE] =
-		usecs_to_cputime64(ktime_to_us(saved_pcpu_ts[cpu].idle_sleeptime));
+		ktime_to_ns(saved_pcpu_ts[cpu].idle_sleeptime);
 	kcpustat_cpu(cpu).cpustat[CPUTIME_IOWAIT] =
-		usecs_to_cputime64(ktime_to_us(saved_pcpu_ts[cpu].iowait_sleeptime));
+		ktime_to_ns(saved_pcpu_ts[cpu].iowait_sleeptime);
 }
 EXPORT_SYMBOL(save_pcpu_tick);
 

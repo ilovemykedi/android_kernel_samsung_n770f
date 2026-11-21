@@ -17,6 +17,7 @@
 #include <linux/irqdomain.h>
 #include <linux/sysfs.h>
 #include <linux/exynos-ss.h>
+#include <linux/sched/clock.h>
 
 #include "internals.h"
 

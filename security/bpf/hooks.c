@@ -16,7 +16,7 @@ static struct security_hook_list bpf_lsm_hooks[] = {
 
 static int __init bpf_lsm_init(void)
 {
-	security_add_hooks(bpf_lsm_hooks, ARRAY_SIZE(bpf_lsm_hooks));
+	security_add_hooks(bpf_lsm_hooks, ARRAY_SIZE(bpf_lsm_hooks), "bpf");
 	pr_info("LSM support for eBPF active\n");
 	return 0;
 }

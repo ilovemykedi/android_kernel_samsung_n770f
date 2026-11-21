@@ -1967,7 +1967,6 @@ static int mos7840_get_serial_info(struct moschip_port *mos7840_port,
 	tmp.line = mos7840_port->port->minor;
 	tmp.port = mos7840_port->port->port_number;
 	tmp.irq = 0;
-	tmp.flags = ASYNC_SKIP_TEST | ASYNC_AUTO_IRQ;
 	tmp.xmit_fifo_size = NUM_URBS * URB_TRANSFER_BUFFER_SIZE;
 	tmp.baud_base = 9600;
 	tmp.close_delay = 5 * HZ;
@@ -2121,7 +2120,8 @@ static int mos7840_calc_num_ports(struct usb_serial *serial)
 static int mos7840_attach(struct usb_serial *serial)
 {
 	if (serial->num_bulk_in < serial->num_ports ||
-			serial->num_bulk_out < serial->num_ports) {
+			serial->num_bulk_out < serial->num_ports ||
+			serial->num_interrupt_in < 1) {
 		dev_err(&serial->interface->dev, "missing endpoints\n");
 		return -ENODEV;
 	}

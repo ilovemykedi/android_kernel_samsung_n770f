@@ -39,6 +39,7 @@
 #include <soc/samsung/exynos-pmu.h>
 #include <soc/samsung/exynos-powermode.h>
 #include <linux/soc/samsung/exynos-soc.h>
+#include <linux/sched/task.h>
 
 #ifdef CONFIG_SEC_DEBUG
 

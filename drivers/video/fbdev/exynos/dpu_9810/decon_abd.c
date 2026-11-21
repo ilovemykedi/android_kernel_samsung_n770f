@@ -49,6 +49,7 @@
 #endif
 #if defined(CONFIG_SEC_DEBUG)
 #include <linux/sec_debug.h>
+#include <linux/sched/clock.h>
 #endif
 
 #if defined(CONFIG_ARCH_EXYNOS) && defined(CONFIG_EXYNOS_DPU20)

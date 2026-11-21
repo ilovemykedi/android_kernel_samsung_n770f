@@ -43,6 +43,7 @@
 #include <linux/errno.h>
 #include <linux/types.h>
 #include <linux/kernel.h>
+#include <linux/sched/signal.h>
 #include <linux/socket.h>
 #include <linux/sockios.h>
 #include <linux/net.h>
@@ -246,6 +247,7 @@ static struct ipv6_devconf ipv6_devconf __read_mostly = {
 	.seg6_require_hmac	= 0,
 #endif
 	.enhanced_dad           = 1,
+	.addr_gen_mode		= IN6_ADDR_GEN_MODE_EUI64,
 };
 
 static struct ipv6_devconf ipv6_devconf_dflt __read_mostly = {
@@ -300,6 +302,7 @@ static struct ipv6_devconf ipv6_devconf_dflt __read_mostly = {
 	.seg6_require_hmac	= 0,
 #endif
 	.enhanced_dad           = 1,
+	.addr_gen_mode		= IN6_ADDR_GEN_MODE_EUI64,
 };
 
 /* Check if link is ready: is it up and is a valid qdisc available */
@@ -2154,12 +2157,14 @@ static int ipv6_generate_eui64(u8 *eui, struct net_device *dev)
 	case ARPHRD_SIT:
 		return addrconf_ifid_sit(eui, dev);
 	case ARPHRD_IPGRE:
+	case ARPHRD_TUNNEL:
 		return addrconf_ifid_gre(eui, dev);
 	case ARPHRD_6LOWPAN:
 		return addrconf_ifid_eui64(eui, dev);
 	case ARPHRD_IEEE1394:
 		return addrconf_ifid_ieee1394(eui, dev);
 	case ARPHRD_TUNNEL6:
+	case ARPHRD_IP6GRE:
 		return addrconf_ifid_ip6tnl(eui, dev);
 	}
 	return -1;
@@ -3228,6 +3233,9 @@ static void addrconf_dev_config(struct net_device *dev)
 	    (dev->type != ARPHRD_IEEE1394) &&
 	    (dev->type != ARPHRD_TUNNEL6) &&
 	    (dev->type != ARPHRD_6LOWPAN) &&
+	    (dev->type != ARPHRD_IP6GRE) &&
+	    (dev->type != ARPHRD_IPGRE) &&
+	    (dev->type != ARPHRD_TUNNEL) &&
 	    (dev->type != ARPHRD_NONE)) {
 		/* Alas, we support only Ethernet autoconfiguration. */
 		return;
@@ -4961,6 +4969,13 @@ static void inet6_ifa_notify(int event, struct inet6_ifaddr *ifa)
 	struct net *net = dev_net(ifa->idev->dev);
 	int err = -ENOBUFS;
 
+	/* Don't send DELADDR notification for TENTATIVE address,
+	 * since NEWADDR notification is sent only after removing
+	 * TENTATIVE flag.
+	 */
+	if (ifa->flags & IFA_F_TENTATIVE && event == RTM_DELADDR)
+		return;
+
 	skb = nlmsg_new(inet6_ifaddr_msgsize(), GFP_ATOMIC);
 	if (!skb)
 		goto errout;
@@ -5051,6 +5066,7 @@ static inline void ipv6_store_devconf(struct ipv6_devconf *cnf,
 	array[DEVCONF_SEG6_REQUIRE_HMAC] = cnf->seg6_require_hmac;
 #endif
 	array[DEVCONF_ENHANCED_DAD] = cnf->enhanced_dad;
+	array[DEVCONF_ADDR_GEN_MODE] = cnf->addr_gen_mode;
 }
 
 static inline size_t inet6_ifla6_size(void)
@@ -5748,13 +5764,18 @@ static int addrconf_sysctl_addr_gen_mode(struct ctl_table *ctl, int write,
 	struct inet6_dev *idev = (struct inet6_dev *)ctl->extra1;
 	struct net *net = (struct net *)ctl->extra2;
 
+	if (!rtnl_trylock())
+		return restart_syscall();
+
 	ret = proc_dointvec(ctl, write, buffer, lenp, ppos);
 
 	if (write) {
 		new_val = *((int *)ctl->data);
 
-		if (check_addr_gen_mode(new_val) < 0)
-			return -EINVAL;
+		if (check_addr_gen_mode(new_val) < 0) {
+			ret = -EINVAL;
+			goto out;
+		}
 
 		/* request for default */
 		if (&net->ipv6.devconf_dflt->addr_gen_mode == ctl->data) {
@@ -5763,19 +5784,22 @@ static int addrconf_sysctl_addr_gen_mode(struct ctl_table *ctl, int write,
 		/* request for individual net device */
 		} else {
 			if (!idev)
-				return ret;
+				goto out;
 
-			if (check_stable_privacy(idev, net, new_val) < 0)
-				return -EINVAL;
+			if (check_stable_privacy(idev, net, new_val) < 0) {
+				ret = -EINVAL;
+				goto out;
+			}
 
 			if (idev->cnf.addr_gen_mode != new_val) {
 				idev->cnf.addr_gen_mode = new_val;
-				rtnl_lock();
 				addrconf_dev_config(idev->dev);
-				rtnl_unlock();
 			}
 		}
 	}
+
+out:
+	rtnl_unlock();
 
 	return ret;
 }
@@ -6243,6 +6267,13 @@ static const struct ctl_table addrconf_sysctl[] = {
 		.maxlen         = sizeof(int),
 		.mode           = 0644,
 		.proc_handler   = proc_dointvec,
+	},
+	{
+		.procname		= "addr_gen_mode",
+		.data			= &ipv6_devconf.addr_gen_mode,
+		.maxlen			= sizeof(int),
+		.mode			= 0644,
+		.proc_handler	= addrconf_sysctl_addr_gen_mode,
 	},
 	{
 		/* sentinel */

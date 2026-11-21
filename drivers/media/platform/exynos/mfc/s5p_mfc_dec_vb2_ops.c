@@ -24,6 +24,7 @@
 #include "s5p_mfc_utils.h"
 #include "s5p_mfc_buf.h"
 #include "s5p_mfc_mem.h"
+#include <linux/sched/clock.h>
 
 static int s5p_mfc_dec_queue_setup(struct vb2_queue *vq,
 				unsigned int *buf_count, unsigned int *plane_count,

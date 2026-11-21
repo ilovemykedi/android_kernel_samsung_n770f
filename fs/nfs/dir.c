@@ -1171,13 +1171,11 @@ static int nfs_lookup_revalidate(struct dentry *dentry, unsigned int flags)
 	/* Force a full look up iff the parent directory has changed */
 	if (!nfs_is_exclusive_create(dir, flags) &&
 	    nfs_check_verifier(dir, dentry, flags & LOOKUP_RCU)) {
-		error = nfs_lookup_verify_inode(inode, flags);
-		if (error) {
+
+		if (nfs_lookup_verify_inode(inode, flags)) {
 			if (flags & LOOKUP_RCU)
 				return -ECHILD;
-			if (error == -ESTALE)
-				goto out_zap_parent;
-			goto out_error;
+			goto out_zap_parent;
 		}
 		nfs_advise_use_readdirplus(dir);
 		goto out_valid;
@@ -1202,10 +1200,8 @@ static int nfs_lookup_revalidate(struct dentry *dentry, unsigned int flags)
 	trace_nfs_lookup_revalidate_enter(dir, dentry, flags);
 	error = NFS_PROTO(dir)->lookup(dir, &dentry->d_name, fhandle, fattr, label);
 	trace_nfs_lookup_revalidate_exit(dir, dentry, flags, error);
-	if (error == -ESTALE || error == -ENOENT)
-		goto out_bad;
 	if (error)
-		goto out_error;
+		goto out_bad;
 	if (nfs_compare_fh(NFS_FH(inode), fhandle))
 		goto out_bad;
 	if ((error = nfs_refresh_inode(inode, fattr)) != 0)
@@ -1449,7 +1445,6 @@ static int nfs4_lookup_revalidate(struct dentry *, unsigned int);
 
 const struct dentry_operations nfs4_dentry_operations = {
 	.d_revalidate	= nfs4_lookup_revalidate,
-	.d_weak_revalidate	= nfs_weak_revalidate,
 	.d_delete	= nfs_dentry_delete,
 	.d_iput		= nfs_dentry_iput,
 	.d_automount	= nfs_d_automount,
@@ -2007,6 +2002,29 @@ nfs_link(struct dentry *old_dentry, struct inode *dir, struct dentry *dentry)
 }
 EXPORT_SYMBOL_GPL(nfs_link);
 
+static void
+nfs_complete_rename(struct rpc_task *task, struct nfs_renamedata *data)
+{
+	struct dentry *old_dentry = data->old_dentry;
+	struct dentry *new_dentry = data->new_dentry;
+	struct inode *old_inode = d_inode(old_dentry);
+	struct inode *new_inode = d_inode(new_dentry);
+
+	nfs_mark_for_revalidate(old_inode);
+
+	switch (task->tk_status) {
+	case 0:
+		if (new_inode != NULL)
+			nfs_drop_nlink(new_inode);
+		d_move(old_dentry, new_dentry);
+		nfs_set_verifier(new_dentry,
+					nfs_save_change_attribute(data->new_dir));
+		break;
+	case -ENOENT:
+		nfs_dentry_handle_enoent(old_dentry);
+	}
+}
+
 /*
  * RENAME
  * FIXME: Some nfsds, like the Linux user space nfsd, may generate a
@@ -2037,7 +2055,7 @@ int nfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 {
 	struct inode *old_inode = d_inode(old_dentry);
 	struct inode *new_inode = d_inode(new_dentry);
-	struct dentry *dentry = NULL, *rehash = NULL;
+	struct dentry *dentry = NULL;
 	struct rpc_task *task;
 	int error = -EBUSY;
 
@@ -2060,10 +2078,8 @@ int nfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 		 * To prevent any new references to the target during the
 		 * rename, we unhash the dentry in advance.
 		 */
-		if (!d_unhashed(new_dentry)) {
+		if (!d_unhashed(new_dentry))
 			d_drop(new_dentry);
-			rehash = new_dentry;
-		}
 
 		if (d_count(new_dentry) > 2) {
 			int err;
@@ -2080,7 +2096,6 @@ int nfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 				goto out;
 
 			new_dentry = dentry;
-			rehash = NULL;
 			new_inode = NULL;
 		}
 	}
@@ -2089,7 +2104,8 @@ int nfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 	if (new_inode != NULL)
 		NFS_PROTO(new_inode)->return_delegation(new_inode);
 
-	task = nfs_async_rename(old_dir, new_dir, old_dentry, new_dentry, NULL);
+	task = nfs_async_rename(old_dir, new_dir, old_dentry, new_dentry,
+					nfs_complete_rename);
 	if (IS_ERR(task)) {
 		error = PTR_ERR(task);
 		goto out;
@@ -2099,21 +2115,9 @@ int nfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 	if (error == 0)
 		error = task->tk_status;
 	rpc_put_task(task);
-	nfs_mark_for_revalidate(old_inode);
 out:
-	if (rehash)
-		d_rehash(rehash);
 	trace_nfs_rename_exit(old_dir, old_dentry,
 			new_dir, new_dentry, error);
-	if (!error) {
-		if (new_inode != NULL)
-			nfs_drop_nlink(new_inode);
-		d_move(old_dentry, new_dentry);
-		nfs_set_verifier(old_dentry,
-					nfs_save_change_attribute(new_dir));
-	} else if (error == -ENOENT)
-		nfs_dentry_handle_enoent(old_dentry);
-
 	/* new dentry created? */
 	if (dentry)
 		dput(dentry);

@@ -12,6 +12,7 @@
 
 #include <linux/interrupt.h>
 #include <linux/fb.h>
+#include <linux/miscdevice.h>
 #if defined(CONFIG_EXYNOS_DPU30)
 #include <linux/dma-fence.h>
 #endif

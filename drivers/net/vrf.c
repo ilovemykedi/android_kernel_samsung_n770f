@@ -36,14 +36,12 @@
 #include <net/addrconf.h>
 #include <net/l3mdev.h>
 #include <net/fib_rules.h>
-#include <net/netns/generic.h>
 
 #define DRV_NAME	"vrf"
 #define DRV_VERSION	"1.0"
 
 #define FIB_RULE_PREF  1000       /* default preference for FIB rules */
-
-static unsigned int vrf_net_id;
+static bool add_fib_rules = true;
 
 struct net_vrf {
 	struct rtable __rcu	*rth;
@@ -79,8 +77,8 @@ static void vrf_tx_error(struct net_device *vrf_dev, struct sk_buff *skb)
 	kfree_skb(skb);
 }
 
-static struct rtnl_link_stats64 *vrf_get_stats64(struct net_device *dev,
-						 struct rtnl_link_stats64 *stats)
+static void vrf_get_stats64(struct net_device *dev,
+			    struct rtnl_link_stats64 *stats)
 {
 	int i;
 
@@ -104,7 +102,6 @@ static struct rtnl_link_stats64 *vrf_get_stats64(struct net_device *dev,
 		stats->rx_bytes += rbytes;
 		stats->rx_packets += rpkts;
 	}
-	return stats;
 }
 
 /* Local traffic destined to local address. Reinsert the packet to rx
@@ -153,28 +150,22 @@ static int vrf_ip6_local_out(struct net *net, struct sock *sk,
 static netdev_tx_t vrf_process_v6_outbound(struct sk_buff *skb,
 					   struct net_device *dev)
 {
-	const struct ipv6hdr *iph;
+	const struct ipv6hdr *iph = ipv6_hdr(skb);
 	struct net *net = dev_net(skb->dev);
-	struct flowi6 fl6;
+	struct flowi6 fl6 = {
+		/* needed to match OIF rule */
+		.flowi6_oif = dev->ifindex,
+		.flowi6_iif = LOOPBACK_IFINDEX,
+		.daddr = iph->daddr,
+		.saddr = iph->saddr,
+		.flowlabel = ip6_flowinfo(iph),
+		.flowi6_mark = skb->mark,
+		.flowi6_proto = iph->nexthdr,
+		.flowi6_flags = FLOWI_FLAG_SKIP_NH_OIF,
+	};
 	int ret = NET_XMIT_DROP;
 	struct dst_entry *dst;
 	struct dst_entry *dst_null = &net->ipv6.ip6_null_entry->dst;
-
-	if (!pskb_may_pull(skb, ETH_HLEN + sizeof(struct ipv6hdr)))
-		goto err;
-
-	iph = ipv6_hdr(skb);
-
-	memset(&fl6, 0, sizeof(fl6));
-	/* needed to match OIF rule */
-	fl6.flowi6_oif = dev->ifindex;
-	fl6.flowi6_iif = LOOPBACK_IFINDEX;
-	fl6.daddr = iph->daddr;
-	fl6.saddr = iph->saddr;
-	fl6.flowlabel = ip6_flowinfo(iph);
-	fl6.flowi6_mark = skb->mark;
-	fl6.flowi6_proto = iph->nexthdr;
-	fl6.flowi6_flags = FLOWI_FLAG_SKIP_NH_OIF;
 
 	dst = ip6_route_output(net, NULL, &fl6);
 	if (dst == dst_null)
@@ -263,7 +254,7 @@ static int vrf_ip_local_out(struct net *net, struct sock *sk,
 static netdev_tx_t vrf_process_v4_outbound(struct sk_buff *skb,
 					   struct net_device *vrf_dev)
 {
-	struct iphdr *ip4h;
+	struct iphdr *ip4h = ip_hdr(skb);
 	int ret = NET_XMIT_DROP;
 	struct flowi4 fl4 = {
 		/* needed to match OIF rule */
@@ -277,21 +268,6 @@ static netdev_tx_t vrf_process_v4_outbound(struct sk_buff *skb,
 	};
 	struct net *net = dev_net(vrf_dev);
 	struct rtable *rt;
-
-	if (!pskb_may_pull(skb, ETH_HLEN + sizeof(struct iphdr)))
-		goto err;
-
-	ip4h = ip_hdr(skb);
-
-	memset(&fl4, 0, sizeof(fl4));
-	/* needed to match OIF rule */
-	fl4.flowi4_oif = vrf_dev->ifindex;
-	fl4.flowi4_iif = LOOPBACK_IFINDEX;
-	fl4.flowi4_tos = RT_TOS(ip4h->tos);
-	fl4.flowi4_flags = FLOWI_FLAG_ANYSRC | FLOWI_FLAG_SKIP_NH_OIF;
-	fl4.flowi4_proto = ip4h->protocol;
-	fl4.daddr = ip4h->daddr;
-	fl4.saddr = ip4h->saddr;
 
 	rt = ip_route_output_flow(net, &fl4, NULL);
 	if (IS_ERR(rt))
@@ -403,7 +379,8 @@ static int vrf_finish_output6(struct net *net, struct sock *sk,
 	if (unlikely(!neigh))
 		neigh = __neigh_create(&nd_tbl, nexthop, dst->dev, false);
 	if (!IS_ERR(neigh)) {
-		ret = dst_neigh_output(dst, neigh, skb);
+		sock_confirm_neigh(skb, neigh);
+		ret = neigh_output(neigh, skb);
 		rcu_read_unlock_bh();
 		return ret;
 	}
@@ -602,14 +579,14 @@ static int vrf_finish_output(struct net *net, struct sock *sk, struct sk_buff *s
 	if (unlikely(!neigh))
 		neigh = __neigh_create(&arp_tbl, &nexthop, dev, false);
 	if (!IS_ERR(neigh)) {
-		ret = dst_neigh_output(dst, neigh, skb);
-		rcu_read_unlock_bh();
-		return ret;
+		sock_confirm_neigh(skb, neigh);
+		ret = neigh_output(neigh, skb);
 	}
 
 	rcu_read_unlock_bh();
 err:
-	vrf_tx_error(skb->dev, skb);
+	if (unlikely(ret < 0))
+		vrf_tx_error(skb->dev, skb);
 	return ret;
 }
 
@@ -809,9 +786,14 @@ static int vrf_del_slave(struct net_device *dev, struct net_device *port_dev)
 static void vrf_dev_uninit(struct net_device *dev)
 {
 	struct net_vrf *vrf = netdev_priv(dev);
+	struct net_device *port_dev;
+	struct list_head *iter;
 
 	vrf_rtable_release(dev, vrf);
 	vrf_rt6_release(dev, vrf);
+
+	netdev_for_each_lower_dev(dev, port_dev, iter)
+		vrf_del_slave(dev, port_dev);
 
 	free_percpu(dev->dstats);
 	dev->dstats = NULL;
@@ -869,7 +851,6 @@ static u32 vrf_fib_table(const struct net_device *dev)
 
 static int vrf_rcv_finish(struct net *net, struct sock *sk, struct sk_buff *skb)
 {
-	kfree_skb(skb);
 	return 0;
 }
 
@@ -1154,7 +1135,7 @@ static int vrf_fib_rule(const struct net_device *dev, __u8 family, bool add_it)
 	frh->family = family;
 	frh->action = FR_ACT_TO_TBL;
 
-	if (nla_put_u8(skb, FRA_L3MDEV, 1))
+	if (nla_put_u32(skb, FRA_L3MDEV, 1))
 		goto nla_put_failure;
 
 	if (nla_put_u32(skb, FRA_PRIORITY, FIB_RULE_PREF))
@@ -1263,12 +1244,6 @@ static int vrf_validate(struct nlattr *tb[], struct nlattr *data[])
 
 static void vrf_dellink(struct net_device *dev, struct list_head *head)
 {
-	struct net_device *port_dev;
-	struct list_head *iter;
-
-	netdev_for_each_lower_dev(dev, port_dev, iter)
-		vrf_del_slave(dev, port_dev);
-
 	unregister_netdevice_queue(dev, head);
 }
 
@@ -1276,8 +1251,6 @@ static int vrf_newlink(struct net *src_net, struct net_device *dev,
 		       struct nlattr *tb[], struct nlattr *data[])
 {
 	struct net_vrf *vrf = netdev_priv(dev);
-	bool *add_fib_rules;
-	struct net *net;
 	int err;
 
 	if (!data || !data[IFLA_VRF_TABLE])
@@ -1293,15 +1266,13 @@ static int vrf_newlink(struct net *src_net, struct net_device *dev,
 	if (err)
 		goto out;
 
-	net = dev_net(dev);
-	add_fib_rules = net_generic(net, vrf_net_id);
-	if (*add_fib_rules) {
+	if (add_fib_rules) {
 		err = vrf_add_fib_rules(dev);
 		if (err) {
 			unregister_netdevice(dev);
 			goto out;
 		}
-		*add_fib_rules = false;
+		add_fib_rules = false;
 	}
 
 out:
@@ -1384,37 +1355,15 @@ static struct notifier_block vrf_notifier_block __read_mostly = {
 	.notifier_call = vrf_device_event,
 };
 
-/* Initialize per network namespace state */
-static int __net_init vrf_netns_init(struct net *net)
-{
-	bool *add_fib_rules = net_generic(net, vrf_net_id);
-
-	*add_fib_rules = true;
-
-	return 0;
-}
-
-static struct pernet_operations vrf_net_ops __net_initdata = {
-	.init = vrf_netns_init,
-	.id   = &vrf_net_id,
-	.size = sizeof(bool),
-};
-
 static int __init vrf_init_module(void)
 {
 	int rc;
 
 	register_netdevice_notifier(&vrf_notifier_block);
 
-	rc = register_pernet_subsys(&vrf_net_ops);
+	rc = rtnl_link_register(&vrf_link_ops);
 	if (rc < 0)
 		goto error;
-
-	rc = rtnl_link_register(&vrf_link_ops);
-	if (rc < 0) {
-		unregister_pernet_subsys(&vrf_net_ops);
-		goto error;
-	}
 
 	return 0;
 

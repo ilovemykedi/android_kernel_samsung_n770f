@@ -14,6 +14,7 @@
 #include <linux/fs.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
+#include <uapi/linux/sched/types.h>
 
 struct fimc_is_lib_vra *g_lib_vra;
 

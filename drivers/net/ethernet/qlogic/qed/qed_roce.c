@@ -1,5 +1,5 @@
 /* QLogic qed NIC Driver
- * Copyright (c) 2015-2016  QLogic Corporation
+ * Copyright (c) 2015-2017  QLogic Corporation
  *
  * This software is available to you under a choice of one of two
  * licenses.  You may choose to be licensed under the terms of the GNU
@@ -948,7 +948,9 @@ static int qed_rdma_create_cq(void *rdma_cxt,
 
 err:
 	/* release allocated icid */
+	spin_lock_bh(&p_info->lock);
 	qed_bmap_release_id(p_hwfn, &p_info->cq_map, returned_id);
+	spin_unlock_bh(&p_info->lock);
 	DP_NOTICE(p_hwfn, "Create CQ failed, rc = %d\n", rc);
 
 	return rc;
@@ -1840,6 +1842,7 @@ err_resp:
 
 static int qed_roce_destroy_qp(struct qed_hwfn *p_hwfn, struct qed_rdma_qp *qp)
 {
+	struct qed_rdma_info *p_rdma_info = p_hwfn->p_rdma_info;
 	u32 num_invalidated_mw = 0;
 	u32 num_bound_mw = 0;
 	u32 start_cid;
@@ -1854,35 +1857,39 @@ static int qed_roce_destroy_qp(struct qed_hwfn *p_hwfn, struct qed_rdma_qp *qp)
 		return -EINVAL;
 	}
 
-	rc = qed_roce_sp_destroy_qp_responder(p_hwfn, qp, &num_invalidated_mw);
-	if (rc)
-		return rc;
+	if (qp->cur_state != QED_ROCE_QP_STATE_RESET) {
+		rc = qed_roce_sp_destroy_qp_responder(p_hwfn, qp,
+						      &num_invalidated_mw);
+		if (rc)
+			return rc;
 
-	/* Send destroy requester ramrod */
-	rc = qed_roce_sp_destroy_qp_requester(p_hwfn, qp, &num_bound_mw);
-	if (rc)
-		return rc;
+		/* Send destroy requester ramrod */
+		rc = qed_roce_sp_destroy_qp_requester(p_hwfn, qp,
+						      &num_bound_mw);
+		if (rc)
+			return rc;
 
-	if (num_invalidated_mw != num_bound_mw) {
-		DP_NOTICE(p_hwfn,
-			  "number of invalidate memory windows is different from bounded ones\n");
-		return -EINVAL;
+		if (num_invalidated_mw != num_bound_mw) {
+			DP_NOTICE(p_hwfn,
+				  "number of invalidate memory windows is different from bounded ones\n");
+			return -EINVAL;
+		}
+
+		spin_lock_bh(&p_rdma_info->lock);
+
+		start_cid = qed_cxt_get_proto_cid_start(p_hwfn,
+							p_rdma_info->proto);
+
+		/* Release responder's icid */
+		qed_bmap_release_id(p_hwfn, &p_rdma_info->cid_map,
+				    qp->icid - start_cid);
+
+		/* Release requester's icid */
+		qed_bmap_release_id(p_hwfn, &p_rdma_info->cid_map,
+				    qp->icid + 1 - start_cid);
+
+		spin_unlock_bh(&p_rdma_info->lock);
 	}
-
-	spin_lock_bh(&p_hwfn->p_rdma_info->lock);
-
-	start_cid = qed_cxt_get_proto_cid_start(p_hwfn,
-						p_hwfn->p_rdma_info->proto);
-
-	/* Release responder's icid */
-	qed_bmap_release_id(p_hwfn, &p_hwfn->p_rdma_info->cid_map,
-			    qp->icid - start_cid);
-
-	/* Release requester's icid */
-	qed_bmap_release_id(p_hwfn, &p_hwfn->p_rdma_info->cid_map,
-			    qp->icid + 1 - start_cid);
-
-	spin_unlock_bh(&p_hwfn->p_rdma_info->lock);
 
 	return 0;
 }

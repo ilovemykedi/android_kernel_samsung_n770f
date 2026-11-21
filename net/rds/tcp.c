@@ -531,7 +531,7 @@ static void rds_tcp_kill_sock(struct net *net)
 	rds_tcp_listen_stop(lsock, &rtn->rds_tcp_accept_w);
 	spin_lock_irq(&rds_tcp_conn_lock);
 	list_for_each_entry_safe(tc, _tc, &rds_tcp_conn_list, t_tcp_node) {
-		struct net *c_net = read_pnet(&tc->t_cpath->cp_conn->c_net);
+		struct net *c_net = tc->t_cpath->cp_conn->c_net;
 
 		if (net != c_net)
 			continue;
@@ -594,7 +594,7 @@ static void rds_tcp_sysctl_reset(struct net *net)
 
 	spin_lock_irq(&rds_tcp_conn_lock);
 	list_for_each_entry_safe(tc, _tc, &rds_tcp_conn_list, t_tcp_node) {
-		struct net *c_net = read_pnet(&tc->t_cpath->cp_conn->c_net);
+		struct net *c_net = tc->t_cpath->cp_conn->c_net;
 
 		if (net != c_net || !tc->t_sock)
 			continue;
@@ -648,35 +648,31 @@ static int rds_tcp_init(void)
 		goto out;
 	}
 
-	ret = register_netdevice_notifier(&rds_tcp_dev_notifier);
-	if (ret) {
-		pr_warn("could not register rds_tcp_dev_notifier\n");
-		goto out;
-	}
-
-	ret = register_pernet_subsys(&rds_tcp_net_ops);
+	ret = rds_tcp_recv_init();
 	if (ret)
 		goto out_slab;
 
-	ret = rds_tcp_recv_init();
-	if (ret)
-		goto out_pernet;
-
-	ret = rds_trans_register(&rds_tcp_transport);
+	ret = register_pernet_subsys(&rds_tcp_net_ops);
 	if (ret)
 		goto out_recv;
+
+	ret = register_netdevice_notifier(&rds_tcp_dev_notifier);
+	if (ret) {
+		pr_warn("could not register rds_tcp_dev_notifier\n");
+		goto out_pernet;
+	}
+
+	rds_trans_register(&rds_tcp_transport);
 
 	rds_info_register_func(RDS_INFO_TCP_SOCKETS, rds_tcp_tc_info);
 
 	goto out;
 
-out_recv:
-	rds_tcp_recv_exit();
 out_pernet:
 	unregister_pernet_subsys(&rds_tcp_net_ops);
+out_recv:
+	rds_tcp_recv_exit();
 out_slab:
-	if (unregister_netdevice_notifier(&rds_tcp_dev_notifier))
-		pr_warn("could not unregister rds_tcp_dev_notifier\n");
 	kmem_cache_destroy(rds_tcp_conn_slab);
 out:
 	return ret;

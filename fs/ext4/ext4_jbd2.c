@@ -43,6 +43,10 @@ static int ext4_journal_check_start(struct super_block *sb)
 	journal_t *journal;
 
 	might_sleep();
+
+	if (unlikely(ext4_forced_shutdown(EXT4_SB(sb))))
+		return -EIO;
+
 	/* @fs.sec -- 2b51c18e3186a30147fd8c0e277b77c937163f9a -- */
 	if (sb->s_flags & MS_RDONLY && ext4_journal_current_handle() == NULL)
 		return -EROFS;
@@ -162,6 +166,13 @@ int __ext4_journal_get_write_access(const char *where, unsigned int line,
 	might_sleep();
 
 	if (ext4_handle_valid(handle)) {
+		struct super_block *sb;
+
+		sb = handle->h_transaction->t_journal->j_private;
+		if (unlikely(ext4_forced_shutdown(EXT4_SB(sb)))) {
+			jbd2_journal_abort_handle(handle);
+			return -EIO;
+		}
 		err = jbd2_journal_get_write_access(handle, bh);
 		if (err)
 			ext4_journal_abort_handle(where, line, __func__, bh,

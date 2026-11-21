@@ -14,17 +14,12 @@
 #include <asm/page.h>
 #include <asm/code-patching.h>
 #include <linux/uaccess.h>
+#include <linux/kprobes.h>
 
 
 int patch_instruction(unsigned int *addr, unsigned int instr)
 {
 	int err;
-
-	/* Make sure we aren't patching a freed init section */
-	if (*PTRRELOC(&init_mem_is_free) && init_section_contains(addr, 4)) {
-		pr_debug("Skipping init section patching addr: 0x%px\n", addr);
-		return 0;
-	}
 
 	__put_user_size(instr, addr, 4, err);
 	if (err)
@@ -38,20 +33,47 @@ int patch_branch(unsigned int *addr, unsigned long target, int flags)
 	return patch_instruction(addr, create_branch(addr, target, flags));
 }
 
-int patch_branch_site(s32 *site, unsigned long target, int flags)
+bool is_offset_in_branch_range(long offset)
 {
-	unsigned int *addr;
-
-	addr = (unsigned int *)((unsigned long)site + *site);
-	return patch_instruction(addr, create_branch(addr, target, flags));
+	/*
+	 * Powerpc branch instruction is :
+	 *
+	 *  0         6                 30   31
+	 *  +---------+----------------+---+---+
+	 *  | opcode  |     LI         |AA |LK |
+	 *  +---------+----------------+---+---+
+	 *  Where AA = 0 and LK = 0
+	 *
+	 * LI is a signed 24 bits integer. The real branch offset is computed
+	 * by: imm32 = SignExtend(LI:'0b00', 32);
+	 *
+	 * So the maximum forward branch should be:
+	 *   (0x007fffff << 2) = 0x01fffffc =  0x1fffffc
+	 * The maximum backward branch should be:
+	 *   (0xff800000 << 2) = 0xfe000000 = -0x2000000
+	 */
+	return (offset >= -0x2000000 && offset <= 0x1fffffc && !(offset & 0x3));
 }
 
-int patch_instruction_site(s32 *site, unsigned int instr)
+/*
+ * Helper to check if a given instruction is a conditional branch
+ * Derived from the conditional checks in analyse_instr()
+ */
+bool __kprobes is_conditional_branch(unsigned int instr)
 {
-	unsigned int *addr;
+	unsigned int opcode = instr >> 26;
 
-	addr = (unsigned int *)((unsigned long)site + *site);
-	return patch_instruction(addr, instr);
+	if (opcode == 16)       /* bc, bca, bcl, bcla */
+		return true;
+	if (opcode == 19) {
+		switch ((instr >> 1) & 0x3ff) {
+		case 16:        /* bclr, bclrl */
+		case 528:       /* bcctr, bcctrl */
+		case 560:       /* bctar, bctarl */
+			return true;
+		}
+	}
+	return false;
 }
 
 unsigned int create_branch(const unsigned int *addr,
@@ -65,7 +87,7 @@ unsigned int create_branch(const unsigned int *addr,
 		offset = offset - (unsigned long)addr;
 
 	/* Check we can represent the target in the instruction format */
-	if (offset < -0x2000000 || offset > 0x1fffffc || offset & 0x3)
+	if (!is_offset_in_branch_range(offset))
 		return 0;
 
 	/* Mask out the flags and target, so they don't step on each other. */
@@ -115,11 +137,6 @@ int instr_is_relative_branch(unsigned int instr)
 		return 0;
 
 	return instr_is_branch_iform(instr) || instr_is_branch_bform(instr);
-}
-
-int instr_is_relative_link_branch(unsigned int instr)
-{
-	return instr_is_relative_branch(instr) && (instr & BRANCH_SET_LINK);
 }
 
 static unsigned long branch_iform_target(const unsigned int *instr)

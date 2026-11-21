@@ -14,6 +14,7 @@
 #define __S5P_MFC_CAL_H __FILE__
 
 #include <linux/io.h>
+#include <linux/sched/clock.h>
 
 #include "s5p_mfc_reg.h"
 

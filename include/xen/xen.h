@@ -43,4 +43,5 @@ extern enum xen_domain_type xen_domain_type;
 #else
 #define xen_pvh_domain()	(0)
 #endif
+
 #endif	/* _XEN_XEN_H */

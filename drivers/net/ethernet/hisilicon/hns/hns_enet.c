@@ -805,7 +805,6 @@ static void hns_nic_rx_up_pro(struct hns_nic_ring_data *ring_data,
 
 	skb->protocol = eth_type_trans(skb, ndev);
 	(void)napi_gro_receive(&ring_data->napi, skb);
-	ndev->last_rx = jiffies;
 }
 
 static int hns_desc_unused(struct hnae_ring *ring)
@@ -1217,43 +1216,48 @@ static void hns_set_irq_affinity(struct hns_nic_priv *priv)
 	struct hns_nic_ring_data *rd;
 	int i;
 	int cpu;
-	cpumask_t mask;
+	cpumask_var_t mask;
+
+	if (!alloc_cpumask_var(&mask, GFP_KERNEL))
+		return;
 
 	/*diffrent irq banlance for 16core and 32core*/
 	if (h->q_num == num_possible_cpus()) {
 		for (i = 0; i < h->q_num * 2; i++) {
 			rd = &priv->ring_data[i];
 			if (cpu_online(rd->queue_index)) {
-				cpumask_clear(&mask);
+				cpumask_clear(mask);
 				cpu = rd->queue_index;
-				cpumask_set_cpu(cpu, &mask);
+				cpumask_set_cpu(cpu, mask);
 				(void)irq_set_affinity_hint(rd->ring->irq,
-							    &mask);
+							    mask);
 			}
 		}
 	} else {
 		for (i = 0; i < h->q_num; i++) {
 			rd = &priv->ring_data[i];
 			if (cpu_online(rd->queue_index * 2)) {
-				cpumask_clear(&mask);
+				cpumask_clear(mask);
 				cpu = rd->queue_index * 2;
-				cpumask_set_cpu(cpu, &mask);
+				cpumask_set_cpu(cpu, mask);
 				(void)irq_set_affinity_hint(rd->ring->irq,
-							    &mask);
+							    mask);
 			}
 		}
 
 		for (i = h->q_num; i < h->q_num * 2; i++) {
 			rd = &priv->ring_data[i];
 			if (cpu_online(rd->queue_index * 2 + 1)) {
-				cpumask_clear(&mask);
+				cpumask_clear(mask);
 				cpu = rd->queue_index * 2 + 1;
-				cpumask_set_cpu(cpu, &mask);
+				cpumask_set_cpu(cpu, mask);
 				(void)irq_set_affinity_hint(rd->ring->irq,
-							    &mask);
+							    mask);
 			}
 		}
 	}
+
+	free_cpumask_var(mask);
 }
 
 static void hns_nic_free_irq(int q_num, struct hns_nic_priv *priv)
@@ -1665,8 +1669,8 @@ void hns_nic_set_rx_mode(struct net_device *ndev)
 		netdev_err(ndev, "sync uc address fail\n");
 }
 
-struct rtnl_link_stats64 *hns_nic_get_stats64(struct net_device *ndev,
-					      struct rtnl_link_stats64 *stats)
+static void hns_nic_get_stats64(struct net_device *ndev,
+				struct rtnl_link_stats64 *stats)
 {
 	int idx = 0;
 	u64 tx_bytes = 0;
@@ -1708,8 +1712,6 @@ struct rtnl_link_stats64 *hns_nic_get_stats64(struct net_device *ndev,
 	stats->tx_window_errors = ndev->stats.tx_window_errors;
 	stats->rx_compressed = ndev->stats.rx_compressed;
 	stats->tx_compressed = ndev->stats.tx_compressed;
-
-	return stats;
 }
 
 static u16

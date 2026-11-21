@@ -15,6 +15,7 @@
 #include <linux/timer.h>
 #include <linux/freezer.h>
 #include <linux/sched.h>
+#include <linux/sched/signal.h>
 
 #include "f2fs.h"
 #include "segment.h"

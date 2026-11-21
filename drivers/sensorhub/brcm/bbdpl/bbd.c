@@ -34,6 +34,7 @@
 
 #ifdef CONFIG_SENSORS_SSP
 #include <linux/spi/spi.h>	//Needs because SSP is tightly coupled with SPI
+#include <linux/sched/signal.h>
 //#include <linux/spidev.h>
 
 extern struct spi_driver *pssp_driver;

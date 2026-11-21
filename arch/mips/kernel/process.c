@@ -11,6 +11,9 @@
  */
 #include <linux/errno.h>
 #include <linux/sched.h>
+#include <linux/sched/debug.h>
+#include <linux/sched/task.h>
+#include <linux/sched/task_stack.h>
 #include <linux/tick.h>
 #include <linux/kernel.h>
 #include <linux/mm.h>
@@ -26,7 +29,6 @@
 #include <linux/kallsyms.h>
 #include <linux/random.h>
 #include <linux/prctl.h>
-#include <linux/nmi.h>
 
 #include <asm/asm.h>
 #include <asm/bootinfo.h>
@@ -118,6 +120,7 @@ int copy_thread(unsigned long clone_flags, unsigned long usp,
 	struct thread_info *ti = task_thread_info(p);
 	struct pt_regs *childregs, *regs = current_pt_regs();
 	unsigned long childksp;
+	p->set_child_tid = p->clear_child_tid = NULL;
 
 	childksp = (unsigned long)task_stack_page(p) + THREAD_SIZE - 32;
 
@@ -212,7 +215,7 @@ static inline int is_ra_save_ins(union mips_instruction *ip, int *poff)
 			if (ip->mm16_r5_format.rt != 31)
 				return 0;
 
-			*poff = ip->mm16_r5_format.imm;
+			*poff = ip->mm16_r5_format.simmediate;
 			*poff = (*poff << 2) / sizeof(ulong);
 			return 1;
 
@@ -344,9 +347,8 @@ static inline int is_sp_move_ins(union mips_instruction *ip)
 static int get_frame_info(struct mips_frame_info *info)
 {
 	bool is_mmips = IS_ENABLED(CONFIG_CPU_MICROMIPS);
-	union mips_instruction insn, *ip;
+	union mips_instruction insn, *ip, *ip_end;
 	const unsigned int max_insns = 128;
-	unsigned int last_insn_size = 0;
 	unsigned int i;
 
 	info->pc_offset = -1;
@@ -356,20 +358,17 @@ static int get_frame_info(struct mips_frame_info *info)
 	if (!ip)
 		goto err;
 
-	for (i = 0; i < max_insns; i++) {
-		ip = (void *)ip + last_insn_size;
+	ip_end = (void *)ip + info->func_size;
 
+	for (i = 0; i < max_insns && ip < ip_end; i++, ip++) {
 		if (is_mmips && mm_insn_16bit(ip->halfword[0])) {
 			insn.halfword[0] = 0;
 			insn.halfword[1] = ip->halfword[0];
-			last_insn_size = 2;
 		} else if (is_mmips) {
 			insn.halfword[0] = ip->halfword[1];
 			insn.halfword[1] = ip->halfword[0];
-			last_insn_size = 4;
 		} else {
 			insn.word = ip->word;
-			last_insn_size = 4;
 		}
 
 		if (is_jump_ins(&insn))
@@ -391,6 +390,8 @@ static int get_frame_info(struct mips_frame_info *info)
 						tmp = (ip->halfword[0] >> 1);
 						info->frame_size = -(signed short)(tmp & 0xf);
 					}
+					ip = (void *) &ip->halfword[1];
+					ip--;
 				} else
 #endif
 				info->frame_size = - ip->i_format.simmediate;
@@ -635,42 +636,28 @@ unsigned long arch_align_stack(unsigned long sp)
 	return sp & ALMASK;
 }
 
-static DEFINE_PER_CPU(struct call_single_data, backtrace_csd);
-static struct cpumask backtrace_csd_busy;
-
-static void handle_backtrace(void *info)
+static void arch_dump_stack(void *info)
 {
-	nmi_cpu_backtrace(get_irq_regs());
-	cpumask_clear_cpu(smp_processor_id(), &backtrace_csd_busy);
-}
+	struct pt_regs *regs;
 
-static void raise_backtrace(cpumask_t *mask)
-{
-	struct call_single_data *csd;
-	int cpu;
+	regs = get_irq_regs();
 
-	for_each_cpu(cpu, mask) {
-		/*
-		 * If we previously sent an IPI to the target CPU & it hasn't
-		 * cleared its bit in the busy cpumask then it didn't handle
-		 * our previous IPI & it's not safe for us to reuse the
-		 * call_single_data_t.
-		 */
-		if (cpumask_test_and_set_cpu(cpu, &backtrace_csd_busy)) {
-			pr_warn("Unable to send backtrace IPI to CPU%u - perhaps it hung?\n",
-				cpu);
-			continue;
-		}
+	if (regs)
+		show_regs(regs);
 
-		csd = &per_cpu(backtrace_csd, cpu);
-		csd->func = handle_backtrace;
-		smp_call_function_single_async(cpu, csd);
-	}
+	dump_stack();
 }
 
 void arch_trigger_cpumask_backtrace(const cpumask_t *mask, bool exclude_self)
 {
-	nmi_trigger_cpumask_backtrace(mask, exclude_self, raise_backtrace);
+	long this_cpu = get_cpu();
+
+	if (cpumask_test_cpu(this_cpu, mask) && !exclude_self)
+		dump_stack();
+
+	smp_call_function_many(mask, arch_dump_stack, NULL, 1);
+
+	put_cpu();
 }
 
 int mips_get_process_fp_mode(struct task_struct *task)
@@ -699,24 +686,8 @@ int mips_set_process_fp_mode(struct task_struct *task, unsigned int value)
 	struct task_struct *t;
 	int max_users;
 
-	/* If nothing to change, return right away, successfully.  */
-	if (value == mips_get_process_fp_mode(task))
-		return 0;
-
-	/* Only accept a mode change if 64-bit FP enabled for o32.  */
-	if (!IS_ENABLED(CONFIG_MIPS_O32_FP64_SUPPORT))
-		return -EOPNOTSUPP;
-
-	/* And only for o32 tasks.  */
-	if (IS_ENABLED(CONFIG_64BIT) && !test_thread_flag(TIF_32BIT_REGS))
-		return -EOPNOTSUPP;
-
 	/* Check the value is valid */
 	if (value & ~known_bits)
-		return -EOPNOTSUPP;
-
-	/* Setting FRE without FR is not supported.  */
-	if ((value & (PR_FP_MODE_FR | PR_FP_MODE_FRE)) == PR_FP_MODE_FRE)
 		return -EOPNOTSUPP;
 
 	/* Avoid inadvertently triggering emulation */
@@ -781,3 +752,47 @@ int mips_set_process_fp_mode(struct task_struct *task, unsigned int value)
 
 	return 0;
 }
+
+#if defined(CONFIG_32BIT) || defined(CONFIG_MIPS32_O32)
+void mips_dump_regs32(u32 *uregs, const struct pt_regs *regs)
+{
+	unsigned int i;
+
+	for (i = MIPS32_EF_R1; i <= MIPS32_EF_R31; i++) {
+		/* k0/k1 are copied as zero. */
+		if (i == MIPS32_EF_R26 || i == MIPS32_EF_R27)
+			uregs[i] = 0;
+		else
+			uregs[i] = regs->regs[i - MIPS32_EF_R0];
+	}
+
+	uregs[MIPS32_EF_LO] = regs->lo;
+	uregs[MIPS32_EF_HI] = regs->hi;
+	uregs[MIPS32_EF_CP0_EPC] = regs->cp0_epc;
+	uregs[MIPS32_EF_CP0_BADVADDR] = regs->cp0_badvaddr;
+	uregs[MIPS32_EF_CP0_STATUS] = regs->cp0_status;
+	uregs[MIPS32_EF_CP0_CAUSE] = regs->cp0_cause;
+}
+#endif /* CONFIG_32BIT || CONFIG_MIPS32_O32 */
+
+#ifdef CONFIG_64BIT
+void mips_dump_regs64(u64 *uregs, const struct pt_regs *regs)
+{
+	unsigned int i;
+
+	for (i = MIPS64_EF_R1; i <= MIPS64_EF_R31; i++) {
+		/* k0/k1 are copied as zero. */
+		if (i == MIPS64_EF_R26 || i == MIPS64_EF_R27)
+			uregs[i] = 0;
+		else
+			uregs[i] = regs->regs[i - MIPS64_EF_R0];
+	}
+
+	uregs[MIPS64_EF_LO] = regs->lo;
+	uregs[MIPS64_EF_HI] = regs->hi;
+	uregs[MIPS64_EF_CP0_EPC] = regs->cp0_epc;
+	uregs[MIPS64_EF_CP0_BADVADDR] = regs->cp0_badvaddr;
+	uregs[MIPS64_EF_CP0_STATUS] = regs->cp0_status;
+	uregs[MIPS64_EF_CP0_CAUSE] = regs->cp0_cause;
+}
+#endif /* CONFIG_64BIT */

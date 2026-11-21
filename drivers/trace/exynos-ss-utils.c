@@ -41,6 +41,8 @@
 #include "exynos-ss-local.h"
 
 #include <linux/nmi.h>
+#include <linux/sched/debug.h>
+#include <linux/sched/task.h>
 
 DEFINE_PER_CPU(struct pt_regs *, ess_core_reg);
 DEFINE_PER_CPU(struct exynos_ss_mmu_reg *, ess_mmu_reg);

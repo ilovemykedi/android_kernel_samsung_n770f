@@ -1,203 +1,3 @@
-                          Kernel Parameters
-                          ~~~~~~~~~~~~~~~~~
-
-The following is a consolidated list of the kernel parameters as
-implemented by the __setup(), core_param() and module_param() macros
-and sorted into English Dictionary order (defined as ignoring all
-punctuation and sorting digits before letters in a case insensitive
-manner), and with descriptions where known.
-
-The kernel parses parameters from the kernel command line up to "--";
-if it doesn't recognize a parameter and it doesn't contain a '.', the
-parameter gets passed to init: parameters with '=' go into init's
-environment, others are passed as command line arguments to init.
-Everything after "--" is passed as an argument to init.
-
-Module parameters can be specified in two ways: via the kernel command
-line with a module name prefix, or via modprobe, e.g.:
-
-	(kernel command line) usbcore.blinkenlights=1
-	(modprobe command line) modprobe usbcore blinkenlights=1
-
-Parameters for modules which are built into the kernel need to be
-specified on the kernel command line.  modprobe looks through the
-kernel command line (/proc/cmdline) and collects module parameters
-when it loads a module, so the kernel command line can be used for
-loadable modules too.
-
-Hyphens (dashes) and underscores are equivalent in parameter names, so
-	log_buf_len=1M print-fatal-signals=1
-can also be entered as
-	log-buf-len=1M print_fatal_signals=1
-
-Double-quotes can be used to protect spaces in values, e.g.:
-	param="spaces in here"
-
-cpu lists:
-----------
-
-Some kernel parameters take a list of CPUs as a value, e.g.  isolcpus,
-nohz_full, irqaffinity, rcu_nocbs.  The format of this list is:
-
-	<cpu number>,...,<cpu number>
-
-or
-
-	<cpu number>-<cpu number>
-	(must be a positive range in ascending order)
-
-or a mixture
-
-<cpu number>,...,<cpu number>-<cpu number>
-
-Note that for the special case of a range one can split the range into equal
-sized groups and for each group use some amount from the beginning of that
-group:
-
-	<cpu number>-cpu number>:<used size>/<group size>
-
-For example one can add to the command line following parameter:
-
-	isolcpus=1,2,10-20,100-2000:2/25
-
-where the final item represents CPUs 100,101,125,126,150,151,...
-
-
-
-This document may not be entirely up to date and comprehensive. The command
-"modinfo -p ${modulename}" shows a current list of all parameters of a loadable
-module. Loadable modules, after being loaded into the running kernel, also
-reveal their parameters in /sys/module/${modulename}/parameters/. Some of these
-parameters may be changed at runtime by the command
-"echo -n ${value} > /sys/module/${modulename}/parameters/${parm}".
-
-The parameters listed below are only valid if certain kernel build options were
-enabled and if respective hardware is present. The text in square brackets at
-the beginning of each description states the restrictions within which a
-parameter is applicable:
-
-	ACPI	ACPI support is enabled.
-	AGP	AGP (Accelerated Graphics Port) is enabled.
-	ALSA	ALSA sound support is enabled.
-	APIC	APIC support is enabled.
-	APM	Advanced Power Management support is enabled.
-	ARM	ARM architecture is enabled.
-	AVR32	AVR32 architecture is enabled.
-	AX25	Appropriate AX.25 support is enabled.
-	BLACKFIN Blackfin architecture is enabled.
-	CLK	Common clock infrastructure is enabled.
-	CMA	Contiguous Memory Area support is enabled.
-	DM	Device mapper support is enabled.
-	DRM	Direct Rendering Management support is enabled.
-	DYNAMIC_DEBUG Build in debug messages and enable them at runtime
-	EDD	BIOS Enhanced Disk Drive Services (EDD) is enabled
-	EFI	EFI Partitioning (GPT) is enabled
-	EIDE	EIDE/ATAPI support is enabled.
-	EVM	Extended Verification Module
-	FB	The frame buffer device is enabled.
-	FTRACE	Function tracing enabled.
-	GCOV	GCOV profiling is enabled.
-	HW	Appropriate hardware is enabled.
-	IA-64	IA-64 architecture is enabled.
-	IMA     Integrity measurement architecture is enabled.
-	IOSCHED	More than one I/O scheduler is enabled.
-	IP_PNP	IP DHCP, BOOTP, or RARP is enabled.
-	IPV6	IPv6 support is enabled.
-	ISAPNP	ISA PnP code is enabled.
-	ISDN	Appropriate ISDN support is enabled.
-	JOY	Appropriate joystick support is enabled.
-	KGDB	Kernel debugger support is enabled.
-	KVM	Kernel Virtual Machine support is enabled.
-	LIBATA  Libata driver is enabled
-	LP	Printer support is enabled.
-	LOOP	Loopback device support is enabled.
-	M68k	M68k architecture is enabled.
-			These options have more detailed description inside of
-			Documentation/m68k/kernel-options.txt.
-	MDA	MDA console support is enabled.
-	MIPS	MIPS architecture is enabled.
-	MOUSE	Appropriate mouse support is enabled.
-	MSI	Message Signaled Interrupts (PCI).
-	MTD	MTD (Memory Technology Device) support is enabled.
-	NET	Appropriate network support is enabled.
-	NUMA	NUMA support is enabled.
-	NFS	Appropriate NFS support is enabled.
-	OSS	OSS sound support is enabled.
-	PV_OPS	A paravirtualized kernel is enabled.
-	PARIDE	The ParIDE (parallel port IDE) subsystem is enabled.
-	PARISC	The PA-RISC architecture is enabled.
-	PCI	PCI bus support is enabled.
-	PCIE	PCI Express support is enabled.
-	PCMCIA	The PCMCIA subsystem is enabled.
-	PNP	Plug & Play support is enabled.
-	PPC	PowerPC architecture is enabled.
-	PPT	Parallel port support is enabled.
-	PS2	Appropriate PS/2 support is enabled.
-	RAM	RAM disk support is enabled.
-	S390	S390 architecture is enabled.
-	SCSI	Appropriate SCSI support is enabled.
-			A lot of drivers have their options described inside
-			the Documentation/scsi/ sub-directory.
-	SECURITY Different security models are enabled.
-	SELINUX SELinux support is enabled.
-	APPARMOR AppArmor support is enabled.
-	SERIAL	Serial support is enabled.
-	SH	SuperH architecture is enabled.
-	SMP	The kernel is an SMP kernel.
-	SPARC	Sparc architecture is enabled.
-	SWSUSP	Software suspend (hibernation) is enabled.
-	SUSPEND	System suspend states are enabled.
-	TPM	TPM drivers are enabled.
-	TS	Appropriate touchscreen support is enabled.
-	UMS	USB Mass Storage support is enabled.
-	USB	USB support is enabled.
-	USBHID	USB Human Interface Device support is enabled.
-	V4L	Video For Linux support is enabled.
-	VMMIO   Driver for memory mapped virtio devices is enabled.
-	VGA	The VGA console has been enabled.
-	VT	Virtual terminal support is enabled.
-	WDT	Watchdog support is enabled.
-	XT	IBM PC/XT MFM hard disk support is enabled.
-	X86-32	X86-32, aka i386 architecture is enabled.
-	X86-64	X86-64 architecture is enabled.
-			More X86-64 boot options can be found in
-			Documentation/x86/x86_64/boot-options.txt .
-	X86	Either 32-bit or 64-bit x86 (same as X86-32+X86-64)
-	X86_UV	SGI UV support is enabled.
-	XEN	Xen support is enabled
-
-In addition, the following text indicates that the option:
-
-	BUGS=	Relates to possible processor bugs on the said processor.
-	KNL	Is a kernel start-up parameter.
-	BOOT	Is a boot loader parameter.
-
-Parameters denoted with BOOT are actually interpreted by the boot
-loader, and have no meaning to the kernel directly.
-Do not modify the syntax of boot loader parameters without extreme
-need or coordination with <Documentation/x86/boot.txt>.
-
-There are also arch-specific kernel-parameters not documented here.
-See for example <Documentation/x86/x86_64/boot-options.txt>.
-
-Note that ALL kernel parameters listed below are CASE SENSITIVE, and that
-a trailing = on the name of any parameter states that that parameter will
-be entered as an environment variable, whereas its absence indicates that
-it will appear as a kernel argument readable via /proc/cmdline by programs
-running once the system is up.
-
-The number of kernel parameters is not limited, but the length of the
-complete command line (parameters including spaces etc.) is limited to
-a fixed number of characters. This limit depends on the architecture
-and is between 256 and 4096 characters. It is defined in the file
-./include/asm/setup.h as COMMAND_LINE_SIZE.
-
-Finally, the [KMG] suffix is commonly described after a number of kernel
-parameter values. These 'K', 'M', and 'G' letters represent the _binary_
-multipliers 'Kilo', 'Mega', and 'Giga', equalling 2^10, 2^20, and 2^30
-bytes respectively. Such letter suffixes can also be entirely omitted.
-
-
 	acpi=		[HW,ACPI,X86,ARM64]
 			Advanced Configuration and Power Interface
 			Format: { force | on | off | strict | noirq | rsdt |
@@ -853,6 +653,9 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 	cpuidle.off=1	[CPU_IDLE]
 			disable the cpuidle sub-system
 
+	cpufreq.off=1	[CPU_FREQ]
+			disable the cpufreq sub-system
+
 	cpu_init_udelay=N
 			[X86] Delay for N microsec between assert and de-assert
 			of APIC INIT to start processors.  This delay occurs
@@ -1027,11 +830,6 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 
 	dis_ucode_ldr	[X86] Disable the microcode loader.
 
-	dm=		[DM] Allows early creation of a device-mapper device.
-			See Documentation/device-mapper/boot.txt.
-
-	dmasound=	[HW,OSS] Sound subsystem buff
-
 	dma_debug=off	If the kernel is compiled with DMA_API_DEBUG support,
 			this option disables the debugging code at boot.
 
@@ -1162,6 +960,12 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			serial port must already be setup and configured.
 			Options are not yet supported.
 
+		lantiq,<addr>
+			Start an early, polled-mode console on a lantiq serial
+			(lqasc) port at the specified address. The serial port
+			must already be setup and configured. Options are not
+			yet supported.
+
 		lpuart,<addr>
 		lpuart32,<addr>
 			Use early console provided by Freescale LP UART driver
@@ -1175,9 +979,10 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			address. The serial port must already be setup
 			and configured. Options are not yet supported.
 
-	earlyprintk=	[X86,SH,BLACKFIN,ARM,M68k]
+	earlyprintk=	[X86,SH,BLACKFIN,ARM,M68k,S390]
 			earlyprintk=vga
 			earlyprintk=efi
+			earlyprintk=sclp
 			earlyprintk=xen
 			earlyprintk=serial[,ttySn[,baudrate]]
 			earlyprintk=serial[,0x...[,baudrate]]
@@ -1211,6 +1016,8 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			the real console.
 
 			The xen output can only be used by Xen PV guests.
+
+			The sclp output can only be used on s390.
 
 	edac_report=	[HW,EDAC] Control how to report EDAC event
 			Format: {"on" | "off" | "force"}
@@ -1378,6 +1185,12 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			function-list.  This list is a comma separated list of
 			functions that can be changed at run time by the
 			set_graph_notrace file in the debugfs tracing directory.
+
+	ftrace_graph_max_depth=<uint>
+			[FTRACE] Used with the function graph tracer. This is
+			the max depth it will trace into a function. This value
+			can be changed at run time by the max_graph_depth file
+			in the tracefs tracing directory. default: 0 (no limit)
 
 	gamecon.map[2|3]=
 			[HW,JOY] Multisystem joystick and NES/SNES/PSX pad
@@ -2022,86 +1835,9 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			(virtualized real and unpaged mode) on capable
 			Intel chips. Default is 1 (enabled)
 
-	kvm-intel.vmentry_l1d_flush=[KVM,Intel] Mitigation for L1 Terminal Fault
-			CVE-2018-3620.
-
-			Valid arguments: never, cond, always
-
-			always: L1D cache flush on every VMENTER.
-			cond:	Flush L1D on VMENTER only when the code between
-				VMEXIT and VMENTER can leak host memory.
-			never:	Disables the mitigation
-
-			Default is cond (do L1 cache flush in specific instances)
-
 	kvm-intel.vpid=	[KVM,Intel] Disable Virtual Processor Identification
 			feature (tagged TLBs) on capable Intel chips.
 			Default is 1 (enabled)
-
-	l1tf=           [X86] Control mitigation of the L1TF vulnerability on
-			      affected CPUs
-
-			The kernel PTE inversion protection is unconditionally
-			enabled and cannot be disabled.
-
-			full
-				Provides all available mitigations for the
-				L1TF vulnerability. Disables SMT and
-				enables all mitigations in the
-				hypervisors, i.e. unconditional L1D flush.
-
-				SMT control and L1D flush control via the
-				sysfs interface is still possible after
-				boot.  Hypervisors will issue a warning
-				when the first VM is started in a
-				potentially insecure configuration,
-				i.e. SMT enabled or L1D flush disabled.
-
-			full,force
-				Same as 'full', but disables SMT and L1D
-				flush runtime control. Implies the
-				'nosmt=force' command line option.
-				(i.e. sysfs control of SMT is disabled.)
-
-			flush
-				Leaves SMT enabled and enables the default
-				hypervisor mitigation, i.e. conditional
-				L1D flush.
-
-				SMT control and L1D flush control via the
-				sysfs interface is still possible after
-				boot.  Hypervisors will issue a warning
-				when the first VM is started in a
-				potentially insecure configuration,
-				i.e. SMT enabled or L1D flush disabled.
-
-			flush,nosmt
-
-				Disables SMT and enables the default
-				hypervisor mitigation.
-
-				SMT control and L1D flush control via the
-				sysfs interface is still possible after
-				boot.  Hypervisors will issue a warning
-				when the first VM is started in a
-				potentially insecure configuration,
-				i.e. SMT enabled or L1D flush disabled.
-
-			flush,nowarn
-				Same as 'flush', but hypervisors will not
-				warn when a VM is started in a potentially
-				insecure configuration.
-
-			off
-				Disables hypervisor mitigations and doesn't
-				emit any warnings.
-				It also drops the swap size and available
-				RAM limit restriction on both hypervisor and
-				bare metal.
-
-			Default is 'flush'.
-
-			For details see: Documentation/hw-vuln/l1tf.rst
 
 	l2cr=		[PPC]
 
@@ -2344,32 +2080,6 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			Format: <first>,<last>
 			Specifies range of consoles to be captured by the MDA.
 
-	mds=		[X86,INTEL]
-			Control mitigation for the Micro-architectural Data
-			Sampling (MDS) vulnerability.
-
-			Certain CPUs are vulnerable to an exploit against CPU
-			internal buffers which can forward information to a
-			disclosure gadget under certain conditions.
-
-			In vulnerable processors, the speculatively
-			forwarded data can be used in a cache side channel
-			attack, to access data to which the attacker does
-			not have direct access.
-
-			This parameter controls the MDS mitigation. The
-			options are:
-
-			full       - Enable MDS mitigation on vulnerable CPUs
-			full,nosmt - Enable MDS mitigation and disable
-				     SMT on vulnerable CPUs
-			off        - Unconditionally disable MDS mitigation
-
-			Not specifying this option is equivalent to
-			mds=full.
-
-			For details see: Documentation/hw-vuln/mds.rst
-
 	mem=nn[KMG]	[KNL,BOOT] Force usage of a specific amount of memory
 			Amount of memory to be used when the kernel is not able
 			to see the whole system memory or for test.
@@ -2497,39 +2207,6 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			kernel as of 2.6.30, a preliminary port can be found
 			in the "bleeding edge" mini2440 support kernel at
 			http://repo.or.cz/w/linux-2.6/mini2440.git
-
-	mitigations=
-			[X86] Control optional mitigations for CPU
-			vulnerabilities.  This is a set of curated,
-			arch-independent options, each of which is an
-			aggregation of existing arch-specific options.
-
-			off
-				Disable all optional CPU mitigations.  This
-				improves system performance, but it may also
-				expose users to several CPU vulnerabilities.
-				Equivalent to: nopti [X86]
-					       nospectre_v1 [X86]
-					       nospectre_v2 [X86]
-					       spectre_v2_user=off [X86]
-					       spec_store_bypass_disable=off [X86]
-					       l1tf=off [X86]
-					       mds=off [X86]
-
-			auto (default)
-				Mitigate all CPU vulnerabilities, but leave SMT
-				enabled, even if it's vulnerable.  This is for
-				users who don't want to be surprised by SMT
-				getting disabled across kernel upgrades, or who
-				have other ways of avoiding SMT-based attacks.
-				Equivalent to: (default behavior)
-
-			auto,nosmt
-				Mitigate all CPU vulnerabilities, disabling SMT
-				if needed.  This is for users who always want to
-				be fully mitigated, even if it means losing SMT.
-				Equivalent to: l1tf=flush,nosmt [X86]
-					       mds=full,nosmt [X86]
 
 	mminit_loglevel=
 			[KNL] When CONFIG_DEBUG_MEMORY_INIT is set, this
@@ -2794,9 +2471,6 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 
 	noalign		[KNL,ARM]
 
-	noaltinstr	[S390] Disables alternative instructions patching
-			(CPU alternatives feature).
-
 	noapic		[SMP,APIC] Tells the kernel to not make use of any
 			IOAPICs that may be present in the system.
 
@@ -2847,22 +2521,6 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 
 	nosmt		[KNL,S390] Disable symmetric multithreading (SMT).
 			Equivalent to smt=1.
-
-			[KNL,x86] Disable symmetric multithreading (SMT).
-			nosmt=force: Force disable SMT, cannot be undone
-				     via the sysfs control file.
-
-	nospectre_v1	[X86,PPC] Disable mitigations for Spectre Variant 1
-			(bounds check bypass). With this option data leaks are
-			possible in the system.
-
-	nospectre_v2	[X86,PPC_FSL_BOOK3E] Disable all mitigations for the Spectre variant 2
-			(indirect branch prediction) vulnerability. System may
-			allow data leaks with this option, which is equivalent
-			to spectre_v2=off.
-
-	nospec_store_bypass_disable
-			[HW] Disable all mitigations for the Speculative Store Bypass vulnerability
 
 	noxsave		[BUGS=X86] Disables x86 extended register state save
 			and restore using xsave. The kernel will fallback to
@@ -2972,10 +2630,10 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 	nopat		[X86] Disable PAT (page attribute table extension of
 			pagetables) support.
 
-	nopcid		[X86-64] Disable the PCID cpu feature.
-
 	norandmaps	Don't use address space randomization.  Equivalent to
 			echo 0 > /proc/sys/kernel/randomize_va_space
+
+	noreplace-paravirt	[X86,IA-64,PV_OPS] Don't patch paravirt_ops
 
 	noreplace-smp	[X86-32,SMP] Don't replace SMP instructions
 			with UP alternatives
@@ -3488,10 +3146,6 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			before loading.
 			See Documentation/blockdev/ramdisk.txt.
 
-	psi=		[KNL] Enable or disable pressure stall information
-			tracking.
-			Format: <bool>
-
 	psmouse.proto=	[HW,MOUSE] Highest PS2 mouse protocol extension to
 			probe for; one of (bare|imps|exps|lifebook|any).
 	psmouse.rate=	[HW,MOUSE] Set desired mouse report rate, in reports
@@ -3509,21 +3163,6 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 
 	pt.		[PARIDE]
 			See Documentation/blockdev/paride.txt.
-
-	pti=		[X86_64] Control Page Table Isolation of user and
-			kernel address spaces.  Disabling this feature
-			removes hardening, but improves performance of
-			system calls and interrupts.
-
-			on   - unconditionally enable
-			off  - unconditionally disable
-			auto - kernel detects whether your CPU model is
-			       vulnerable to issues that PTI mitigates
-
-			Not specifying this option is equivalent to pti=auto.
-
-	nopti		[X86_64]
-			Equivalent to pti=off
 
 	pty.legacy_count=
 			[KNL] Number of legacy pty's. Overwrites compiled-in
@@ -3657,6 +3296,13 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			only "lazy" RCU callbacks (RCU_FAST_NO_HZ=y).
 			Lazy RCU callbacks are those which RCU can
 			prove do nothing more than free memory.
+
+	rcutree.rcu_kick_kthreads= [KNL]
+			Cause the grace-period kthread to get an extra
+			wake_up() if it sleeps three times longer than
+			it should at force-quiescent-state time.
+			This wake_up() will be accompanied by a
+			WARN_ONCE() splat and an ftrace_dump().
 
 	rcuperf.gp_exp= [KNL]
 			Measure performance of expedited synchronous
@@ -3868,13 +3514,6 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			Run specified binary instead of /init from the ramdisk,
 			used for early userspace startup. See initrd.
 
-	rdrand=		[X86]
-			force - Override the decision by the kernel to hide the
-				advertisement of RDRAND support (this affects
-				certain AMD processors because of buggy BIOS
-				support, specifically around the suspend/resume
-				path).
-
 	reboot=		[KNL]
 			Format (x86 or x86_64):
 				[w[arm] | c[old] | h[ard] | s[oft] | g[pio]] \
@@ -3949,6 +3588,10 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 
 	rhash_entries=	[KNL,NET]
 			Set number of hash buckets for route cache
+
+	ring3mwait=disable
+			[KNL] Disable ring 3 MONITOR/MWAIT feature on supported
+			CPUs.
 
 	ro		[KNL] Mount root device read-only on boot
 
@@ -4066,11 +3709,11 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			last alloc / free. For more information see
 			Documentation/vm/slub.txt.
 
-	slub_memcg_sysfs=       [MM, SLUB]
+	slub_memcg_sysfs=	[MM, SLUB]
 			Determines whether to enable sysfs directories for
 			memory cgroup sub-caches. 1 to enable, 0 to disable.
 			The default is determined by CONFIG_SLUB_MEMCG_SYSFS_ON.
-			Enabling this can lead to a very high number of debug
+			Enabling this can lead to a very high number of	debug
 			directories and files being created under
 			/sys/kernel/slub.
 
@@ -4131,151 +3774,10 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 	sonypi.*=	[HW] Sony Programmable I/O Control Device driver
 			See Documentation/laptops/sonypi.txt
 
-	spectre_v2=	[X86] Control mitigation of Spectre variant 2
-			(indirect branch speculation) vulnerability.
-			The default operation protects the kernel from
-			user space attacks.
-
-			on   - unconditionally enable, implies
-			       spectre_v2_user=on
-			off  - unconditionally disable, implies
-			       spectre_v2_user=off
-			auto - kernel detects whether your CPU model is
-			       vulnerable
-
-			Selecting 'on' will, and 'auto' may, choose a
-			mitigation method at run time according to the
-			CPU, the available microcode, the setting of the
-			CONFIG_RETPOLINE configuration option, and the
-			compiler with which the kernel was built.
-
-			Selecting 'on' will also enable the mitigation
-			against user space to user space task attacks.
-
-			Selecting 'off' will disable both the kernel and
-			the user space protections.
-
-			Specific mitigations can also be selected manually:
-
-			retpoline	  - replace indirect branches
-			retpoline,generic - google's original retpoline
-			retpoline,amd     - AMD-specific minimal thunk
-
-			Not specifying this option is equivalent to
-			spectre_v2=auto.
-
-	spectre_v2_user=
-			[X86] Control mitigation of Spectre variant 2
-		        (indirect branch speculation) vulnerability between
-		        user space tasks
-
-			on	- Unconditionally enable mitigations. Is
-				  enforced by spectre_v2=on
-
-			off     - Unconditionally disable mitigations. Is
-				  enforced by spectre_v2=off
-
-			prctl   - Indirect branch speculation is enabled,
-				  but mitigation can be enabled via prctl
-				  per thread.  The mitigation control state
-				  is inherited on fork.
-
-			prctl,ibpb
-				- Like "prctl" above, but only STIBP is
-				  controlled per thread. IBPB is issued
-				  always when switching between different user
-				  space processes.
-
-			seccomp
-				- Same as "prctl" above, but all seccomp
-				  threads will enable the mitigation unless
-				  they explicitly opt out.
-
-			seccomp,ibpb
-				- Like "seccomp" above, but only STIBP is
-				  controlled per thread. IBPB is issued
-				  always when switching between different
-				  user space processes.
-
-			auto    - Kernel selects the mitigation depending on
-				  the available CPU features and vulnerability.
-
-			Default mitigation:
-			If CONFIG_SECCOMP=y then "seccomp", otherwise "prctl"
-
-			Not specifying this option is equivalent to
-			spectre_v2_user=auto.
-
-	spec_store_bypass_disable=
-			[HW] Control Speculative Store Bypass (SSB) Disable mitigation
-			(Speculative Store Bypass vulnerability)
-
-			Certain CPUs are vulnerable to an exploit against a
-			a common industry wide performance optimization known
-			as "Speculative Store Bypass" in which recent stores
-			to the same memory location may not be observed by
-			later loads during speculative execution. The idea
-			is that such stores are unlikely and that they can
-			be detected prior to instruction retirement at the
-			end of a particular speculation execution window.
-
-			In vulnerable processors, the speculatively forwarded
-			store can be used in a cache side channel attack, for
-			example to read memory to which the attacker does not
-			directly have access (e.g. inside sandboxed code).
-
-			This parameter controls whether the Speculative Store
-			Bypass optimization is used.
-
-			on      - Unconditionally disable Speculative Store Bypass
-			off     - Unconditionally enable Speculative Store Bypass
-			auto    - Kernel detects whether the CPU model contains an
-				  implementation of Speculative Store Bypass and
-				  picks the most appropriate mitigation. If the
-				  CPU is not vulnerable, "off" is selected. If the
-				  CPU is vulnerable the default mitigation is
-				  architecture and Kconfig dependent. See below.
-			prctl   - Control Speculative Store Bypass per thread
-				  via prctl. Speculative Store Bypass is enabled
-				  for a process by default. The state of the control
-				  is inherited on fork.
-			seccomp - Same as "prctl" above, but all seccomp threads
-				  will disable SSB unless they explicitly opt out.
-
-			Not specifying this option is equivalent to
-			spec_store_bypass_disable=auto.
-
-			Default mitigations:
-			X86:	If CONFIG_SECCOMP=y "seccomp", otherwise "prctl"
-
 	spia_io_base=	[HW,MTD]
 	spia_fio_base=
 	spia_pedr=
 	spia_peddr=
-
-	ssbd=		[ARM64,HW]
-			Speculative Store Bypass Disable control
-
-			On CPUs that are vulnerable to the Speculative
-			Store Bypass vulnerability and offer a
-			firmware based mitigation, this parameter
-			indicates how the mitigation should be used:
-
-			force-on:  Unconditionally enable mitigation for
-				   for both kernel and userspace
-			force-off: Unconditionally disable mitigation for
-				   for both kernel and userspace
-			kernel:    Always enable mitigation in the
-				   kernel, and offer a prctl interface
-				   to allow userspace to register its
-				   interest in being mitigated too.
-
-	stack_guard_gap=	[MM]
-			override the default stack gap protection. The value
-			is in page units and it defines how many pages prior
-			to (for stacks growing down) resp. after (for stacks
-			growing up) the main stack are reserved for no other
-			mapping. Default value is 256 pages.
 
 	stacktrace	[FTRACE]
 			Enabled the stack tracer on boot up.

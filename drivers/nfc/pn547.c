@@ -41,6 +41,8 @@
 #include <linux/signal.h>
 #ifdef CONFIG_ESE_SECURE
 #include <linux/smc.h>
+#include <linux/sched/signal.h>
+#include <linux/sched/task.h>
 #endif
 
 #include "./nfc_logger/nfc_logger.h"

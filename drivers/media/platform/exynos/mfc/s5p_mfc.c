@@ -18,6 +18,7 @@
 #include <linux/smc.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
+#include <linux/sched/clock.h>
 
 #include "s5p_mfc_common.h"
 

@@ -30,6 +30,7 @@
 #ifdef CONFIG_SEC_PM_DEBUG
 #include <linux/uaccess.h>
 #include <linux/proc_fs.h>
+#include <linux/sched/clock.h>
 #endif
 
 #include "exynos-ss-local.h"

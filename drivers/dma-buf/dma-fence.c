@@ -22,12 +22,14 @@
 #include <linux/export.h>
 #include <linux/atomic.h>
 #include <linux/dma-fence.h>
+#include <linux/sched/signal.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/dma_fence.h>
 
 EXPORT_TRACEPOINT_SYMBOL(dma_fence_annotate_wait_on);
 EXPORT_TRACEPOINT_SYMBOL(dma_fence_emit);
+EXPORT_TRACEPOINT_SYMBOL(dma_fence_enable_signal);
 
 /*
  * fence context counter: each execution context should have its own
@@ -286,7 +288,12 @@ EXPORT_SYMBOL(dma_fence_add_callback);
  * @fence: [in]	the dma_fence to query
  *
  * This wraps dma_fence_get_status_locked() to return the error status
- * condition on a signaled fence.
+ * condition on a signaled fence. See dma_fence_get_status_locked() for more
+ * details.
+ *
+ * Returns 0 if the fence has not yet been signaled, 1 if the fence has
+ * been signaled without an error condition, or a negative error code
+ * if the fence has been completed in err.
  */
 int dma_fence_get_status(struct dma_fence *fence)
 {

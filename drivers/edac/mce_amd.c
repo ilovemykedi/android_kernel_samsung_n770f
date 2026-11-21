@@ -937,12 +937,13 @@ static const char *decode_error_status(struct mce *m)
 	}
 
 	if (m->status & MCI_STATUS_DEFERRED)
-		return "Deferred error.";
+		return "Deferred error, no action required.";
 
 	return "Corrected error, no action required.";
 }
 
-int amd_decode_mce(struct notifier_block *nb, unsigned long val, void *data)
+static int
+amd_decode_mce(struct notifier_block *nb, unsigned long val, void *data)
 {
 	struct mce *m = (struct mce *)data;
 	struct cpuinfo_x86 *c = &cpu_data(m->extcpu);
@@ -955,7 +956,7 @@ int amd_decode_mce(struct notifier_block *nb, unsigned long val, void *data)
 
 	pr_emerg(HW_ERR "CPU:%d (%x:%x:%x) MC%d_STATUS[%s|%s|%s|%s|%s",
 		m->extcpu,
-		c->x86, c->x86_model, c->x86_stepping,
+		c->x86, c->x86_model, c->x86_mask,
 		m->bank,
 		((m->status & MCI_STATUS_OVER)	? "Over"  : "-"),
 		((m->status & MCI_STATUS_UC)	? "UE"	  :
@@ -1005,6 +1006,9 @@ int amd_decode_mce(struct notifier_block *nb, unsigned long val, void *data)
 		goto err_code;
 	}
 
+	if (m->tsc)
+		pr_emerg(HW_ERR "TSC: %llu\n", m->tsc);
+
 	if (!fam_ops)
 		goto err_code;
 
@@ -1046,10 +1050,10 @@ int amd_decode_mce(struct notifier_block *nb, unsigned long val, void *data)
 
 	return NOTIFY_STOP;
 }
-EXPORT_SYMBOL_GPL(amd_decode_mce);
 
 static struct notifier_block amd_mce_dec_nb = {
 	.notifier_call	= amd_decode_mce,
+	.priority	= MCE_PRIO_EDAC,
 };
 
 static int __init mce_amd_init(void)

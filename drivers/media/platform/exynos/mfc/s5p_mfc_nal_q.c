@@ -25,6 +25,7 @@
 #include "s5p_mfc_buf.h"
 #include "s5p_mfc_mem.h"
 #include "s5p_mfc_irq.h"
+#include <linux/sched/clock.h>
 
 #ifdef NAL_Q_ENABLE
 #define CBR_I_LIMIT_MAX			5

@@ -70,6 +70,9 @@
 #include <linux/pid_namespace.h>
 #include <linux/security.h>
 #include <linux/spinlock.h>
+#include <linux/sched/signal.h>
+#include <linux/sched/task.h>
+#include <uapi/linux/sched/types.h>
 
 #include <uapi/linux/android/binder.h>
 #include "binder_alloc.h"
@@ -5226,7 +5229,7 @@ static void binder_vma_close(struct vm_area_struct *vma)
 	binder_defer_work(proc, BINDER_DEFERRED_PUT_FILES);
 }
 
-static int binder_vm_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
+static int binder_vm_fault(struct vm_fault *vmf)
 {
 	return VM_FAULT_SIGBUS;
 }

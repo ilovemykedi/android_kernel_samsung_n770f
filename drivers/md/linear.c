@@ -69,7 +69,7 @@ static int linear_congested(struct mddev *mddev, int bits)
 
 	for (i = 0; i < conf->raid_disks && !ret ; i++) {
 		struct request_queue *q = bdev_get_queue(conf->disks[i].rdev->bdev);
-		ret |= bdi_congested(&q->backing_dev_info, bits);
+		ret |= bdi_congested(q->backing_dev_info, bits);
 	}
 
 	rcu_read_unlock();
@@ -292,6 +292,7 @@ static void linear_make_request(struct mddev *mddev, struct bio *bio)
 				trace_block_bio_remap(bdev_get_queue(split->bi_bdev),
 						      split, disk_devt(mddev->gendisk),
 						      bio_sector);
+			mddev_check_writesame(mddev, split);
 			generic_make_request(split);
 		}
 	} while (split != bio);

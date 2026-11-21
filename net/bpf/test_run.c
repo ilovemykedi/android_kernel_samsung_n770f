@@ -19,6 +19,7 @@
 #include <net/tcp.h>
 #include <net/xdp.h>
 #include <linux/sock_diag.h>
+#include <linux/sched/signal.h>
 
 struct bpf_test_timer {
 	u32 i;

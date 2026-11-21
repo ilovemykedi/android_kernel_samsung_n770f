@@ -34,6 +34,7 @@
 #include <sound/samsung/sec_audio_debug.h>
 
 #include <linux/sec_debug.h>
+#include <linux/sched/clock.h>
 #include <sound/samsung/abox.h>
 #include "abox/abox.h"
 

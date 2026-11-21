@@ -39,6 +39,8 @@
 #include <linux/dp_logger.h>
 #ifdef CONFIG_SEC_DEBUG
 #include <linux/sec_debug.h>
+#include <linux/sched/clock.h>
+#include <uapi/linux/sched/types.h>
 #endif
 
 #include "decon.h"

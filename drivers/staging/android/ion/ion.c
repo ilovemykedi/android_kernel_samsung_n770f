@@ -570,7 +570,7 @@ static void ion_handle_get(struct ion_handle *handle)
 static struct ion_handle *ion_handle_get_check_overflow(
 					struct ion_handle *handle)
 {
-	if (atomic_read(&handle->ref.refcount) + 1 == 0)
+	if (kref_read(&handle->ref) + 1 == 0)
 		return ERR_PTR(-EOVERFLOW);
 	ion_handle_get(handle);
 	return handle;
@@ -1248,14 +1248,14 @@ static void ion_buffer_sync_for_device(struct ion_buffer *buffer,
 	list_for_each_entry(vma_list, &buffer->vmas, list) {
 		struct vm_area_struct *vma = vma_list->vma;
 
-		zap_page_range(vma, vma->vm_start, vma->vm_end - vma->vm_start,
-			       NULL);
+		zap_page_range(vma, vma->vm_start, vma->vm_end - vma->vm_start);
 	}
 	mutex_unlock(&buffer->lock);
 }
 
-static int ion_vm_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
+static int ion_vm_fault(struct vm_fault *vmf)
 {
+	struct vm_area_struct *vma = vmf->vma;
 	struct ion_buffer *buffer = vma->vm_private_data;
 	unsigned long pfn;
 	int ret;
@@ -1924,7 +1924,7 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 			seq_printf(s, "%16s %16u %16zu %d %d\n",
 				   buffer->task_comm, buffer->pid,
 				   buffer->size, buffer->kmap_cnt,
-				   atomic_read(&buffer->ref.refcount));
+				   kref_read(&buffer->ref));
 			total_orphaned_size += buffer->size;
 		}
 	}
@@ -2206,7 +2206,7 @@ static int ion_debug_buffer_show(struct seq_file *s, void *unused)
 				buffer->task_comm, buffer->pid,
 				buffer->thread_comm,
 				buffer->tid, buffer->size, buffer->kmap_cnt,
-				atomic_read(&buffer->ref.refcount),
+				kref_read(&buffer->ref),
 				buffer->handle_count, master_name,
 				buffer->flags);
 		seq_printf(s, "(");

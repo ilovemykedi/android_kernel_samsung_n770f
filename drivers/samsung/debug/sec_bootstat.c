@@ -27,6 +27,7 @@
 #include <linux/slab.h>
 #include <linux/sec_class.h>
 #include <linux/sec_ext.h>
+#include <linux/sched/clock.h>
 #include <clocksource/arm_arch_timer.h>
 
 static u32 mct_start;
