@@ -280,11 +280,24 @@ static int samsung_dt_node_to_map(struct pinctrl_dev *pctldev,
 	*map = NULL;
 	*num_maps = 0;
 
-	if (!of_get_child_count(np_config))
+	if (!of_get_child_count(np_config)) {
+		/*
+		 * Samsung bootloader DTBs carry empty placeholder states, e.g.
+		 * the r7 "sleep" hog on pinctrl@11050000 is just
+		 * "sleep-state { phandle = <..>; };". There is nothing to map;
+		 * since v4.11 (99e4f67508e1) a hog parse error fails the whole
+		 * controller (and with it UFS), so treat it as an empty state.
+		 */
+		if (!of_find_property(np_config, "samsung,pins", NULL)) {
+			dev_dbg(pctldev->dev, "%s: empty state, nothing to map\n",
+				np_config->full_name);
+			return 0;
+		}
 		return samsung_dt_subnode_to_map(drvdata, pctldev->dev,
 							np_config, map,
 							&reserved_maps,
 							num_maps);
+	}
 
 	for_each_child_of_node(np_config, np) {
 		ret = samsung_dt_subnode_to_map(drvdata, pctldev->dev, np, map,
