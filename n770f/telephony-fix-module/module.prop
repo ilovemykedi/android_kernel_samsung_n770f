@@ -1,0 +1,6 @@
+id=n770f_coloros_telephony_fix
+name=N770F ColorOS telephony + setup fix
+version=v3
+versionCode=3
+author=n770f
+description=Galaxy Note10 Lite ColorOS port: LTE + mobile data (fixed empty attach APNs, e.g. Vodafone DE), keeps signal (phone process no longer crashes when the modem registers), shows incoming calls on Exynos, removes the crash-looping Qualcomm IMS, and fixes the soft reboot a few seconds into setup (unsupported colour mode). Calls/SMS over 2G/3G; no VoLTE yet.

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Galaxy Note10 Lite (SM-N770F) optical under-display fingerprint (Egis ET713).
+     AOSP AuthService registers a HIDL fingerprint HAL as TYPE_UDFPS_OPTICAL only
+     when this array holds x, y, radius (px, 1080x2400); empty = TYPE_REAR. -->
+<resources>
+    <integer-array name="config_udfps_sensor_props">
+        <item>540</item>
+        <item>2169</item>
+        <item>100</item>
+    </integer-array>
+    <bool name="config_is_powerbutton_fps">false</bool>
+</resources>

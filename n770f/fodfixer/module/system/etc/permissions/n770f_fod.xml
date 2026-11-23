@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- N770F FOD fixer: fingerprint present, optical in-display (ColorOS/oplus flag). -->
+<permissions>
+    <feature name="android.hardware.fingerprint" />
+    <feature name="oppo.hardware.fingerprint.optical.support" />
+</permissions>

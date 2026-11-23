@@ -1,0 +1,6 @@
+id=n770f_aod_fix
+name=N770F AOD + DT2W fix (ColorOS port)
+version=v9
+versionCode=9
+author=port
+description=AOD: points the framework at SystemUI DozeService, arms the s6e3fa9 panel low-power AOD (HLPM) and runs a stand-in for the OnePlus displaypanelfeature HAL for the AOD to lock screen transition. Screen-off FOD: arms fod_enable + sensor rect (needs kernel v19+, enables the opt-in melfas_mss100 follow_display/fod_lpm_wakeup parameters). DT2W: arms aot_enable and fixes the sec_touchscreen key layout so KEY_WAKEUP wakes the screen. Also clears stale root-owned display overlay idmaps.

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ColorOS AOD runs on SystemUI's doze dream; the Samsung vendor/product
+         overlays leave these empty, so the display goes OFF instead of DOZE. -->
+    <string name="config_dozeComponent" translatable="false">com.android.systemui/com.android.systemui.doze.DozeService</string>
+    <bool name="config_dozeAlwaysOnDisplayAvailable">true</bool>
+    <bool name="config_dozeAlwaysOnEnabled">true</bool>
+    <bool name="config_displayBlanksAfterDoze">false</bool>
+</resources>

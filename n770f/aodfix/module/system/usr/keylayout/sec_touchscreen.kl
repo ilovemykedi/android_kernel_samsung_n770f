@@ -1,0 +1,3 @@
+# sec_touchscreen (Melfas MSS100): the ROM copy only had an invalid
+# "key 455 FINGERPRINT" line, so KEY_WAKEUP from double tap to wake was dropped.
+key 143   WAKEUP

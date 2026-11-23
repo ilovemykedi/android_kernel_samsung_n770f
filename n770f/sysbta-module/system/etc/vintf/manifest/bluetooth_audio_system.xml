@@ -1,0 +1,13 @@
+<!-- TrebleDroid sysbta, provider declared as "default" for the AOSP BT stack -->
+<manifest version="9.0" type="framework">
+    <hal format="hidl">
+        <name>android.hardware.audio</name>
+        <transport>hwbinder</transport>
+        <fqname>@6.0::IDevicesFactory/sysbta</fqname>
+    </hal>
+    <hal format="aidl">
+        <name>android.hardware.bluetooth.audio</name>
+        <version>4</version>
+        <fqname>IBluetoothAudioProviderFactory/default</fqname>
+    </hal>
+</manifest>

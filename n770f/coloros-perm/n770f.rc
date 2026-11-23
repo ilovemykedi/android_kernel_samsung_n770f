@@ -1,0 +1,46 @@
+# N770F (Galaxy Note10 Lite) fixes for the ColorOS 16 port, baked into system.
+# Replaces the KernelSU modules n770f_aod_fix, n770f_haptics_fix, n770f_sysbta,
+# n10l_fod_mask and n770f_display_overlay (their static files are in the image).
+# Runs as root in the shell domain: the N770F kernel keeps SELinux permissive,
+# and the stock policy has no domains for these helpers.
+
+on post-fs-data
+    # Vendor files the Samsung vendor image lacks (vendor is the device's own):
+    # Bluetooth A2DP via sysbta in the audio policy, and the HWC mask-layer HBM
+    # libexynosdisplay for the optical FOD. Bind them before audioserver and
+    # the composer HAL start.
+    mount none /system/etc/n770f/vendor/etc/audio_policy_configuration.xml /vendor/etc/audio_policy_configuration.xml bind
+    mount none /system/etc/n770f/vendor/lib64/libexynosdisplay.so /vendor/lib64/libexynosdisplay.so bind
+    # blocking: the FOD props must be set before the fingerprint HAL and
+    # system_server start
+    exec u:r:shell:s0 root root -- /system/bin/sh /system/bin/n770f-boot.sh early
+
+# TrebleDroid system-side Bluetooth audio HAL. The shim renames
+# IBluetoothAudioProviderFactory/sysbta to .../default, the instance the
+# ColorOS Bluetooth stack looks up.
+service n770f_sysbta /system/bin/hw/android.hardware.bluetooth.audio-service-system
+    class hal
+    user root
+    group audio net_bt_admin net_bt_stack
+    setenv LD_PRELOAD /system/lib64/libsysbta_shim.so
+    seclabel u:r:shell:s0
+    ioprio rt 4
+    task_profiles ProcessCapacityHigh HighPerformance
+
+# Stand-in for OnePlus' vendor.oplus.hardware.displaypanelfeature HAL. ColorOS
+# SystemUI enables the AOD <-> lock screen transition only when it answers.
+# Feature 217 = 0x3: smooth transition + enter AOD directly in doze.
+service n770f_dpf /system/bin/app_process /system/bin com.n770f.dpf.Main 0x3
+    class main
+    user root
+    setenv CLASSPATH /system/framework/n770f-dpf.dex
+    seclabel u:r:shell:s0
+
+service n770f_late /system/bin/sh /system/bin/n770f-boot.sh late
+    user root
+    oneshot
+    disabled
+    seclabel u:r:shell:s0
+
+on property:sys.boot_completed=1
+    start n770f_late

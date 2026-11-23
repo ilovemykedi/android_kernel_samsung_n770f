@@ -1,0 +1,6 @@
+id=n770f_fod_fixer
+name=N770F FOD fixer (ColorOS / AOSP ports)
+version=v1
+versionCode=1
+author=n770f
+description=Galaxy Note10 Lite optical in-display fingerprint for ports that detect the wrong sensor type: forces optical UDFPS (props + config_udfps_sensor_props overlay at 540,2169 r100), the optical feature flag, the ColorOS light-spot props and the FOD mask brightness, and writes a report to /data/adb/n770f_fod_fixer/report.txt (Action button re-runs it).

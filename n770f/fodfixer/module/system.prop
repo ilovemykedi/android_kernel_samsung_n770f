@@ -1,0 +1,12 @@
+# Galaxy Note10 Lite (SM-N770F): optical under-display fingerprint (Egis ET713,
+# Samsung stock fingerprint HAL). Sensor centre x=540 y=2169, touch radius 100 px
+# on the 1080x2400 panel.
+ro.vendor.fingerprint.type=udfps_optical
+ro.vendor.fingerprint.sensor_location=540|2169|100
+ro.vendor.fingerprint.request_touch_event=true
+ro.vendor.fingerprint.screen_off_press_delay=200
+persist.vendor.fingerprint.sensor_type=optical
+# ColorOS SystemUI light spot: centre 308 px above the bottom edge, 267 px icon
+persist.vendor.fingerprint.optical.iconlocation=308
+persist.vendor.fingerprint.optical.iconsize=267
+persist.vendor.fingerprint.optical.iconnumber=0

@@ -1,0 +1,39 @@
+#!/sbin/sh
+# Tab A7 (gta4l) ColorOS 13 port - vendor/product fixes
+OUTFD=$2; ZIP=$3
+ui() { echo "ui_print $1" > /proc/self/fd/$OUTFD; echo "ui_print" > /proc/self/fd/$OUTFD; }
+abort() { ui "! $1"; umount /tmp/tv /tmp/tp 2>/dev/null; exit 1; }
+ui "Tab A7 ColorOS port fixes"
+W=/tmp/taba7fix; rm -rf $W; mkdir -p $W /tmp/tv /tmp/tp
+unzip -o "$ZIP" 'vendor/*' 'product/*' -d $W >/dev/null || abort "unzip failed"
+for p in vendor product; do [ -e /dev/block/mapper/$p ] || abort "no /dev/block/mapper/$p (reboot recovery)"; done
+umount /vendor /product 2>/dev/null
+mount -t ext4 -o rw /dev/block/mapper/vendor /tmp/tv || abort "mount vendor"
+mount -t ext4 -o rw /dev/block/mapper/product /tmp/tp || abort "mount product"
+put() { # src dst mode ctx
+  mkdir -p "$(dirname $2)"; [ -f "$2" ] && [ ! -f "$2.orig" ] && cp -p "$2" "$2.orig"
+  cp -f "$1" "$2" && chown 0:0 "$2" && chmod $3 "$2" && chcon $4 "$2" || abort "copy $2"; }
+ui "- vendor: fstab (erofs), selinux _debug, vintf (no soundtrigger), groups"
+for f in etc/fstab.default etc/fstab.emmc etc/selinux/vendor_sepolicy_debug.cil etc/selinux/plat_pub_versioned_debug.cil etc/vintf/manifest.xml etc/group etc/init/qseecomd.rc; do
+  put $W/vendor/$f /tmp/tv/$f 644 u:object_r:vendor_configs_file:s0; done
+rm -f /tmp/tv/bin/qwrap.sh
+ui "- vendor: face unlock HAL (facehal)"
+put $W/vendor/bin/hw/android.hardware.biometrics.face-service.facehal /tmp/tv/bin/hw/android.hardware.biometrics.face-service.facehal 755 u:object_r:hal_allocator_default_exec:s0
+chown 0:2000 /tmp/tv/bin/hw/android.hardware.biometrics.face-service.facehal
+put $W/vendor/etc/init/android.hardware.biometrics.face-service.facehal.rc /tmp/tv/etc/init/android.hardware.biometrics.face-service.facehal.rc 644 u:object_r:vendor_configs_file:s0
+put $W/vendor/etc/vintf/manifest/android.hardware.biometrics.face-service.facehal.xml /tmp/tv/etc/vintf/manifest/android.hardware.biometrics.face-service.facehal.xml 644 u:object_r:vendor_configs_file:s0
+for l in libnwshim.so libc++_shared.so libjni_stfaceunlock_api.so libtensorflowlite.so libtensorflowlite_gpu_delegate.so libfacehal_jni.so; do put $W/vendor/lib64/$l /tmp/tv/lib64/$l 644 u:object_r:same_process_hal_file:s0; done
+mkdir -p /tmp/tv/lib64/facehal; chmod 755 /tmp/tv/lib64/facehal; chcon u:object_r:vendor_file:s0 /tmp/tv/lib64/facehal
+for l in libjni_stfaceunlock_api.so libtensorflowlite.so libtensorflowlite_gpu_delegate.so libfacehal_jni.so; do ln -sf ../$l /tmp/tv/lib64/facehal/$l; done
+ui "- product: selinux _debug, build.prop, ExtServices overlay, ModuleMetadata"
+for f in etc/selinux/product_sepolicy_debug.cil etc/selinux/product_sepolicy_and_mapping_debug.sha256 etc/build.prop overlay/TabA7ExtServicesOverlay.apk app/ModuleMetadata/ModuleMetadata.apk; do
+  put $W/product/$f /tmp/tp/$f 644 u:object_r:system_file:s0; done
+chmod 755 /tmp/tp/overlay /tmp/tp/app /tmp/tp/app/ModuleMetadata; chcon u:object_r:system_file:s0 /tmp/tp/overlay /tmp/tp/app /tmp/tp/app/ModuleMetadata
+ui "- product: disable leftover LineageOS apps/overlays"
+mkdir -p /tmp/tp/_lineage_disabled/app
+for d in /tmp/tp/app/*; do b=$(basename $d); [ "$b" = ModuleMetadata ] && continue; mv "$d" /tmp/tp/_lineage_disabled/app/ 2>/dev/null; done
+[ -d /tmp/tp/priv-app ] && mv /tmp/tp/priv-app /tmp/tp/_lineage_disabled/ 2>/dev/null
+for o in /tmp/tp/overlay/*; do [ "$(basename $o)" = TabA7ExtServicesOverlay.apk ] && continue; mkdir -p /tmp/tp/_lineage_disabled/overlay; mv "$o" /tmp/tp/_lineage_disabled/overlay/; done
+sync; umount /tmp/tv /tmp/tp; rm -rf $W
+ui "Done. Originals kept as *.orig. Format data if coming from another ROM."
+exit 0
